@@ -1,9 +1,16 @@
 import { TableRow, TableCell } from '@mui/material'
-import InfiniteScrollTable from '../components/InfiniteScrollTable'
+import InfiniteScrollTable, { TableColumn } from '../components/InfiniteScrollTable'
+
+interface UserRecord {
+  id: number
+  name: string
+  age: number
+  email: string
+}
 
 function Users() {
   // Define columns configuration
-  const columns = [
+  const columns: TableColumn[] = [
     { field: 'id', label: 'ID', align: 'left', sortable: true },
     { field: 'name', label: 'Name', align: 'left', sortable: true },
     { field: 'age', label: 'Age', align: 'right', sortable: true },
@@ -11,7 +18,7 @@ function Users() {
   ]
 
   // Function to render each row
-  const renderRow = (row, columns) => (
+  const renderRow = (row: UserRecord) => (
     <TableRow key={row.id} hover>
       <TableCell>{row.id}</TableCell>
       <TableCell>{row.name}</TableCell>
@@ -21,7 +28,7 @@ function Users() {
   )
 
   return (
-    <InfiniteScrollTable
+    <InfiniteScrollTable<UserRecord>
       title="Users List"
       columns={columns}
       apiUrl="/api/getrecords"

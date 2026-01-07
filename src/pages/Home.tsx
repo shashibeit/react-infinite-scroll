@@ -5,7 +5,7 @@ import viteLogo from '/vite.svg'
 import '../App.css'
 
 function Home() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState<number>(0)
 
   return (
     <>
@@ -31,7 +31,7 @@ function Home() {
           </Button>
         </Stack>
         <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
+          Edit <code>src/App.tsx</code> and save to test HMR
         </p>
       </div>
       <p className="read-the-docs">
