@@ -1,4 +1,4 @@
-import { useState, useEffect, ReactElement } from 'react'
+import { ReactElement } from 'react'
 import { 
   Table, 
   TableBody, 
@@ -11,195 +11,153 @@ import {
   Box,
   CircularProgress,
   TextField,
-  InputAdornment,
-  TableSortLabel
+  InputAdornment
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 
 export interface TableColumn {
   field: string
   label: string
   align?: 'left' | 'right' | 'center'
   sortable?: boolean
+  width?: string | number
+  minWidth?: string | number
 }
 
 export interface InfiniteScrollTableProps<T = any> {
   title: string
   columns: TableColumn[]
-  apiUrl?: string
-  buildApiUrl?: (searchText: string, offset: number, sortField: string, sortOrder: string) => string
-  extractRecords?: (data: any) => T[]
+  data: T[]
+  loading?: boolean
   searchPlaceholder?: string
-  pageSize?: number
-  defaultSortField?: string
-  defaultSortOrder?: 'asc' | 'desc'
+  searchValue?: string
+  onSearchChange?: (value: string) => void
+  sortField?: string
+  sortOrder?: 'asc' | 'desc'
+  onSortChange?: (field: string, order: 'asc' | 'desc') => void
   renderRow: (row: T, columns: TableColumn[]) => ReactElement
-  scrollThreshold?: number
+  onRowClick?: (row: T) => void
+  hasMore?: boolean
+  emptyMessage?: string
+  totalRecords?: number
 }
 
 function InfiniteScrollTable<T = any>({
   title,
   columns = [],
-  apiUrl,
-  buildApiUrl,
-  extractRecords = (data: any) => data.records || data || [],
+  data,
+  loading = false,
   searchPlaceholder = 'Search...',
-  pageSize = 100,
-  defaultSortField = columns[0]?.field || 'id',
-  defaultSortOrder = 'asc',
+  searchValue = '',
+  onSearchChange,
+  sortField = '',
+  sortOrder = 'asc',
+  onSortChange,
   renderRow,
-  scrollThreshold = 300
+  onRowClick,
+  hasMore = true,
+  emptyMessage = 'No records found',
+  totalRecords
 }: InfiniteScrollTableProps<T>) {
-  const [rows, setRows] = useState<T[]>([])
-  const [offset, setOffset] = useState<number>(0)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [hasMore, setHasMore] = useState<boolean>(true)
-  const [searchText, setSearchText] = useState<string>('')
-  const [debouncedSearchText, setDebouncedSearchText] = useState<string>('')
-  const [sortField, setSortField] = useState<string>(defaultSortField)
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(defaultSortOrder)
-
-  // Debounce search text
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchText(searchText)
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [searchText])
-
-  // Reset and load data when search text or sort changes
-  useEffect(() => {
-    setRows([])
-    setOffset(0)
-    setHasMore(true)
-    loadData(0, debouncedSearchText, sortField, sortOrder)
-  }, [debouncedSearchText, sortField, sortOrder])
-
-  // Window scroll event listener
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-      const scrollHeight = document.documentElement.scrollHeight
-      const clientHeight = window.innerHeight
-
-      if (scrollHeight - scrollTop <= clientHeight + scrollThreshold) {
-        loadMoreData()
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-    }
-  }, [loading, hasMore, offset, debouncedSearchText, sortField, sortOrder])
-
-  // Function to fetch data from API
-  const loadData = async (currentOffset: number, search: string, field: string, order: 'asc' | 'desc') => {
-    if (loading) return
-
-    setLoading(true)
-    
-    try {
-      const url = buildApiUrl 
-        ? buildApiUrl(search, currentOffset, field, order)
-        : `${apiUrl}?searchText=${encodeURIComponent(search)}&offset=${currentOffset}&sortField=${field}&sortOrder=${order}`
-
-      const response = await fetch(url)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch data')
-      }
-      
-      const data = await response.json()
-      const newRecords = extractRecords(data)
-      
-      if (currentOffset === 0) {
-        setRows(newRecords)
-      } else {
-        setRows(prevRows => [...prevRows, ...newRecords])
-      }
-      
-      if (newRecords.length < pageSize) {
-        setHasMore(false)
-      }
-      
-      setOffset(currentOffset + pageSize)
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Function to load more data
-  const loadMoreData = () => {
-    if (loading || !hasMore) return
-    loadData(offset, debouncedSearchText, sortField, sortOrder)
-  }
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchText(e.target.value)
+    if (onSearchChange) {
+      onSearchChange(e.target.value)
+    }
   }
 
   // Handle sort
   const handleSort = (field: string) => {
-    const isAsc = sortField === field && sortOrder === 'asc'
-    setSortOrder(isAsc ? 'desc' : 'asc')
-    setSortField(field)
+    if (onSortChange) {
+      const isAsc = sortField === field && sortOrder === 'asc'
+      onSortChange(field, isAsc ? 'desc' : 'asc')
+    }
   }
 
   return (
     <Box sx={{ width: '100%', padding: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4">
+        {onSearchChange && (
+          <TextField
+            placeholder={searchPlaceholder}
+            value={searchValue}
+            onChange={handleSearchChange}
+            size="small"
+            sx={{ width: 300 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        )}
+        <Typography variant="h4" sx={{ flexGrow: 1, textAlign: 'center' }}>
           {title}
         </Typography>
-        <TextField
-          placeholder={searchPlaceholder}
-          value={searchText}
-          onChange={handleSearchChange}
-          size="small"
-          sx={{ width: 300 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box sx={{ width: 300, textAlign: 'right' }}>
+          {totalRecords !== undefined && (
+            <Typography variant="body1" color="text.secondary">
+              Displaying {data.length} rows
+            </Typography>
+          )}
+        </Box>
       </Box>
       
       <TableContainer component={Paper}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              {columns.map((column) => (
+              {columns.map((column, index) => (
                 <TableCell 
                   key={column.field} 
                   align={column.align || 'left'}
-                  sx={{ backgroundColor: '#22223e !important', color: '#fff' }}
+                  sx={{ 
+                    backgroundColor: '#23233f !important', 
+                    color: '#FFF',
+                    paddingLeft: '10px',
+                    paddingRight: '10px',
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                    minHeight: '80px',
+                    maxHeight: '80px',
+                    height: '80px',
+                    fontSize: '16px',
+                    fontWeight: 300,
+                    width: column.width,
+                    minWidth: column.minWidth,
+                    borderRight: index === columns.length - 1 ? 'none' : '2px solid #FFF',
+                    outline: 'none'
+                  }}
                 >
-                  {column.sortable !== false ? (
-                    <TableSortLabel
-                      active={sortField === column.field}
-                      direction={sortField === column.field ? sortOrder : 'asc'}
+                  {column.sortable !== false && onSortChange ? (
+                    <Box
                       onClick={() => handleSort(column.field)}
-                      sx={{ 
-                        color: '#fff !important',
-                        '&.Mui-active': {
-                          color: '#fff !important'
-                        },
-                        '& .MuiTableSortLabel-icon': {
-                          color: '#fff !important'
-                        }
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        color: sortField === column.field ? '#EC6B29' : '#FFF',
+                        fontSize: '16px',
+                        fontWeight: 300
                       }}
                     >
-                      {column.label}
-                    </TableSortLabel>
+                      <span>{column.label}</span>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', ml: 1 }}>
+                        {sortField === column.field && sortOrder === 'asc' ? (
+                          <KeyboardArrowUpIcon sx={{ fontSize: 20, color: '#EC6B29' }} />
+                        ) : sortField === column.field && sortOrder === 'desc' ? (
+                          <KeyboardArrowDownIcon sx={{ fontSize: 20, color: '#EC6B29' }} />
+                        ) : (
+                          <KeyboardArrowUpIcon sx={{ fontSize: 20, color: '#FFF', opacity: 0.5 }} />
+                        )}
+                      </Box>
+                    </Box>
                   ) : (
                     column.label
                   )}
@@ -208,16 +166,51 @@ function InfiniteScrollTable<T = any>({
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.length === 0 && !loading ? (
+            {(!data || data.length === 0) && !loading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
                   <Typography variant="body2" color="text.secondary">
-                    No records found
+                    {emptyMessage}
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((row) => renderRow(row, columns))
+              data?.map((row, index) => (
+                <TableRow
+                  key={(row as any).id}
+                  onClick={() => onRowClick && onRowClick(row)}
+                  sx={{
+                    cursor: onRowClick ? 'pointer' : 'default',
+                    backgroundColor: index % 2 === 0 ? '#F0F0F2' : '#E3E3E5',
+                    minHeight: '80px',
+                    '&:hover': onRowClick ? {
+                      opacity: 0.8
+                    } : {},
+                    '& .MuiTableCell-root': {
+                      color: '#23233F',
+                      fontSize: '16px',
+                      fontWeight: 300,
+                      paddingLeft: '10px',
+                      paddingRight: '10px',
+                      minHeight: '80px',
+                      borderRight: '2px solid #FFF',
+                      outline: 'none',
+                      '&:last-child': {
+                        borderRight: 'none'
+                      },
+                      '& a': {
+                        color: '#3C76A7',
+                        textDecoration: 'none',
+                        '&:hover': {
+                          textDecoration: 'underline'
+                        }
+                      }
+                    }
+                  }}
+                >
+                  {renderRow(row, columns)}
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
@@ -226,7 +219,7 @@ function InfiniteScrollTable<T = any>({
             <CircularProgress />
           </Box>
         )}
-        {!hasMore && rows.length > 0 && (
+        {!hasMore && data && data.length > 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', padding: 2 }}>
             <Typography variant="body2" color="text.secondary">
               No more data to load

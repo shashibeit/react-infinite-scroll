@@ -19,49 +19,79 @@ export function makeServer({ environment = 'development' }: ServerConfig = {}) {
         const pageSize = 100
 
         // Generate sample data
-        const firstNames = ['John', 'Jane', 'Bob', 'Alice', 'Charlie', 'Emma', 'Michael', 'Sarah', 'David', 'Lisa', 
-          'James', 'Mary', 'Robert', 'Patricia', 'William', 'Jennifer', 'Richard', 'Linda', 'Joseph', 'Elizabeth']
-        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
-          'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin']
+        const questionSamples = [
+          'What are your thoughts on climate change policy?',
+          'How can we improve public transportation?',
+          'What measures should be taken for data privacy?',
+          'How can healthcare accessibility be improved?',
+          'What are your views on renewable energy adoption?',
+          'How should education reform be approached?',
+          'What strategies can reduce urban pollution?',
+          'How can we address income inequality?',
+          'What improvements are needed in cybersecurity?',
+          'How should we regulate artificial intelligence?'
+        ]
+        
+        const statuses = ['Active', 'Pending', 'Completed', 'Draft', 'Under Review']
+        const reviewTypes = ['Peer Review', 'Expert Review', 'Internal Review', 'External Review', 'Public Review']
+        const participantTypes = ['Individual', 'Organization', 'Government', 'Academic', 'Private Sector']
+        const sections = ['Section A', 'Section B', 'Section C', 'Section D', 'Section E']
+        const countries = ['USA', 'UK', 'Canada', 'Germany', 'France', 'Japan', 'Australia', 'India', 'Brazil', 'China']
 
         // Generate a large pool of records (e.g., 1000 records)
         const allRecords = []
         for (let i = 1; i <= 1000; i++) {
-          const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-          const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-          const name = `${firstName} ${lastName}`
-          const age = Math.floor(Math.random() * (65 - 20 + 1)) + 20
-          const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i}@example.com`
+          const questionText = questionSamples[Math.floor(Math.random() * questionSamples.length)]
+          const status = statuses[Math.floor(Math.random() * statuses.length)]
+          const reviewType = reviewTypes[Math.floor(Math.random() * reviewTypes.length)]
+          const participantType = participantTypes[Math.floor(Math.random() * participantTypes.length)]
+          const section = sections[Math.floor(Math.random() * sections.length)]
+          const country = countries[Math.floor(Math.random() * countries.length)]
           
-          allRecords.push({ id: i, name, age, email })
+          allRecords.push({ 
+            id: i, 
+            questionText: `${questionText} (${i})`,
+            status, 
+            reviewType,
+            participantType,
+            section,
+            countries: country
+          })
         }
 
         // Filter by search text if provided
         let filteredRecords = allRecords
         if (searchText.trim() !== '') {
           filteredRecords = allRecords.filter(record => 
-            record.name.toLowerCase().includes(searchText.toLowerCase())
+            record.questionText.toLowerCase().includes(searchText.toLowerCase()) ||
+            record.status.toLowerCase().includes(searchText.toLowerCase()) ||
+            record.reviewType.toLowerCase().includes(searchText.toLowerCase()) ||
+            record.participantType.toLowerCase().includes(searchText.toLowerCase()) ||
+            record.section.toLowerCase().includes(searchText.toLowerCase()) ||
+            record.countries.toLowerCase().includes(searchText.toLowerCase())
           )
         }
 
-        // Sort records
-        filteredRecords.sort((a: any, b: any) => {
-          const field = sortField as string
-          let aValue = a[field]
-          let bValue = b[field]
+        // Sort records only if sortField is provided
+        if (sortField && sortField.trim() !== '') {
+          filteredRecords.sort((a: any, b: any) => {
+            const field = sortField as string
+            let aValue = a[field]
+            let bValue = b[field]
 
-          // Handle string comparison for case-insensitive sorting
-          if (typeof aValue === 'string') {
-            aValue = aValue.toLowerCase()
-            bValue = bValue.toLowerCase()
-          }
+            // Handle string comparison for case-insensitive sorting
+            if (typeof aValue === 'string') {
+              aValue = aValue.toLowerCase()
+              bValue = bValue.toLowerCase()
+            }
 
-          if (sortOrder === 'asc') {
-            return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
-          } else {
-            return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
-          }
-        })
+            if (sortOrder === 'asc') {
+              return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+            } else {
+              return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+            }
+          })
+        }
 
         // Apply pagination
         const paginatedRecords = filteredRecords.slice(offset, offset + pageSize)
