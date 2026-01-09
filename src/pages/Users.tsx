@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TableCell } from '@mui/material'
+import { TableCell, Box, TextField, InputAdornment, Typography } from '@mui/material'
+import SearchIcon from '@mui/icons-material/Search'
 import InfiniteScrollTable, { TableColumn } from '../components/InfiniteScrollTable'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
@@ -131,22 +132,43 @@ function Users() {
   )
 
   return (
-    <InfiniteScrollTable<UserRecord>
-      title="Questions List"
-      columns={columns}
-      data={rows}
-      loading={loading}
-      searchPlaceholder="Search questions..."
-      searchValue={searchText}
-      onSearchChange={handleSearchChange}
-      sortField={sortField}
-      sortOrder={sortOrder}
-      onSortChange={handleSortChange}
-      renderRow={renderRow}
-      onRowClick={handleRowClick}
-      hasMore={hasMore}
-      totalRecords={rows.length}
-    />
+    <Box>
+      <Box sx={{ padding: 2, paddingBottom: 1 }}>
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          Questions List
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <TextField
+            placeholder="Search questions..."
+            value={searchText}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            size="small"
+            sx={{ width: 400 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Typography variant="body1" color="text.secondary">
+            Displaying {rows.length} rows
+          </Typography>
+        </Box>
+      </Box>
+      <InfiniteScrollTable<UserRecord>
+        columns={columns}
+        data={rows}
+        loading={loading}
+        sortField={sortField}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        renderRow={renderRow}
+        onRowClick={handleRowClick}
+        hasMore={hasMore}
+      />
+    </Box>
   )
 }
 

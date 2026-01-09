@@ -9,11 +9,8 @@ import {
   Paper,
   Typography,
   Box,
-  CircularProgress,
-  TextField,
-  InputAdornment
+  CircularProgress
 } from '@mui/material'
-import SearchIcon from '@mui/icons-material/Search'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 
@@ -27,13 +24,9 @@ export interface TableColumn {
 }
 
 export interface InfiniteScrollTableProps<T = any> {
-  title: string
   columns: TableColumn[]
   data: T[]
   loading?: boolean
-  searchPlaceholder?: string
-  searchValue?: string
-  onSearchChange?: (value: string) => void
   sortField?: string
   sortOrder?: 'asc' | 'desc'
   onSortChange?: (field: string, order: 'asc' | 'desc') => void
@@ -41,33 +34,20 @@ export interface InfiniteScrollTableProps<T = any> {
   onRowClick?: (row: T) => void
   hasMore?: boolean
   emptyMessage?: string
-  totalRecords?: number
 }
 
 function InfiniteScrollTable<T = any>({
-  title,
   columns = [],
   data,
   loading = false,
-  searchPlaceholder = 'Search...',
-  searchValue = '',
-  onSearchChange,
   sortField = '',
   sortOrder = 'asc',
   onSortChange,
   renderRow,
   onRowClick,
   hasMore = true,
-  emptyMessage = 'No records found',
-  totalRecords
+  emptyMessage = 'No records found'
 }: InfiniteScrollTableProps<T>) {
-
-  // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onSearchChange) {
-      onSearchChange(e.target.value)
-    }
-  }
 
   // Handle sort
   const handleSort = (field: string) => {
@@ -79,35 +59,6 @@ function InfiniteScrollTable<T = any>({
 
   return (
     <Box sx={{ width: '100%', padding: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        {onSearchChange && (
-          <TextField
-            placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={handleSearchChange}
-            size="small"
-            sx={{ width: 300 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        )}
-        <Typography variant="h4" sx={{ flexGrow: 1, textAlign: 'center' }}>
-          {title}
-        </Typography>
-        <Box sx={{ width: 300, textAlign: 'right' }}>
-          {totalRecords !== undefined && (
-            <Typography variant="body1" color="text.secondary">
-              Displaying {data.length} rows
-            </Typography>
-          )}
-        </Box>
-      </Box>
-      
       <TableContainer component={Paper}>
         <Table stickyHeader>
           <TableHead>
