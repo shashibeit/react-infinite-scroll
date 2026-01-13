@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TableCell, Box, TextField, InputAdornment, Typography } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
@@ -17,6 +17,7 @@ import {
 function Users() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const isFetchingRef = useRef(false)
   
   const {
     rows,
@@ -84,7 +85,8 @@ function Users() {
       const scrollHeight = document.documentElement.scrollHeight
       const clientHeight = window.innerHeight
 
-      if (scrollHeight - scrollTop <= clientHeight + scrollThreshold && !loading && hasMore) {
+      if (scrollHeight - scrollTop <= clientHeight + scrollThreshold && !loading && hasMore && !isFetchingRef.current) {
+        isFetchingRef.current = true
         dispatch(fetchQuestions({
           offset,
           searchText: debouncedSearchText,
@@ -101,6 +103,13 @@ function Users() {
       window.removeEventListener('scroll', handleScroll)
     }
   }, [loading, hasMore, offset, debouncedSearchText, sortField, sortOrder, dispatch])
+
+  // Reset fetching ref when loading completes
+  useEffect(() => {
+    if (!loading) {
+      isFetchingRef.current = false
+    }
+  }, [loading])
 
   // Handle search change
   const handleSearchChange = (value: string) => {

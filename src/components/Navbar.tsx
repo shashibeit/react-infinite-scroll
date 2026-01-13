@@ -18,6 +18,12 @@ function Navbar() {
           <Button color="inherit" component={Link} to="/products">
             Products
           </Button>
+          <Button color="inherit" component={Link} to="/categories">
+            Categories
+          </Button>
+          <Button color="inherit" component={Link} to="/drag-drop">
+            Drag & Drop
+          </Button>
         </Box>
       </Toolbar>
     </AppBar>

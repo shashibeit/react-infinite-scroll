@@ -103,15 +103,16 @@ const questionsSlice = createSlice({
       })
       .addCase(fetchQuestions.fulfilled, (state, action) => {
         state.loading = false
-        const { records, append, offset } = action.payload
+        const { records, append } = action.payload
         
         if (append) {
           state.rows = [...state.rows, ...records]
+          state.offset = state.offset + records.length
         } else {
           state.rows = records
+          state.offset = records.length
         }
         
-        state.offset = offset
         state.hasMore = records.length === 100
         state.totalRecords = state.rows.length
       })

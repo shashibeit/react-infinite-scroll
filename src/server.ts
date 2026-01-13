@@ -175,6 +175,128 @@ export function makeServer({ environment = 'development' }: ServerConfig = {}) {
           }
         )
       })
+
+      this.get('/getcategories', (_schema, request) => {
+        const offset = parseInt((request.queryParams.offset as string) || '0', 10)
+        const pageSize = parseInt((request.queryParams.pageSize as string) || '50', 10)
+
+        // Generate sample category data
+        const categoryPrefixes = ['Technology', 'Business', 'Science', 'Art', 'Music', 'Sports', 'Health', 
+          'Education', 'Finance', 'Marketing', 'Design', 'Engineering', 'Medicine', 'Law', 'Agriculture',
+          'Architecture', 'Psychology', 'Sociology', 'Philosophy', 'Literature']
+        
+        const categorySuffixes = ['Basics', 'Advanced', 'Professional', 'Expert', 'Fundamentals', 
+          'Principles', 'Concepts', 'Applications', 'Theory', 'Practice']
+
+        // Generate a pool of 200 categories
+        const allCategories = []
+        for (let i = 1; i <= 200; i++) {
+          const prefix = categoryPrefixes[Math.floor(Math.random() * categoryPrefixes.length)]
+          const suffix = categorySuffixes[Math.floor(Math.random() * categorySuffixes.length)]
+          
+          allCategories.push({
+            id: i,
+            name: `${prefix} - ${suffix} ${i}`,
+            description: `Comprehensive ${prefix.toLowerCase()} ${suffix.toLowerCase()} for professionals`
+          })
+        }
+
+        // Apply pagination
+        const paginatedCategories = allCategories.slice(offset, offset + pageSize)
+
+        return new Response(
+          200,
+          {},
+          {
+            records: paginatedCategories,
+            total: allCategories.length,
+            offset,
+            pageSize
+          }
+        )
+      })
+
+      this.get('/getcountries', (_schema, request) => {
+        const offset = parseInt((request.queryParams.offset as string) || '0', 10)
+        const pageSize = parseInt((request.queryParams.pageSize as string) || '50', 10)
+
+        // Generate sample country data (195 countries)
+        const countries = [
+          { id: 1, code: 'US', name: 'United States' },
+          { id: 2, code: 'GB', name: 'United Kingdom' },
+          { id: 3, code: 'CA', name: 'Canada' },
+          { id: 4, code: 'AU', name: 'Australia' },
+          { id: 5, code: 'DE', name: 'Germany' },
+          { id: 6, code: 'FR', name: 'France' },
+          { id: 7, code: 'IT', name: 'Italy' },
+          { id: 8, code: 'ES', name: 'Spain' },
+          { id: 9, code: 'JP', name: 'Japan' },
+          { id: 10, code: 'CN', name: 'China' },
+          { id: 11, code: 'IN', name: 'India' },
+          { id: 12, code: 'BR', name: 'Brazil' },
+          { id: 13, code: 'MX', name: 'Mexico' },
+          { id: 14, code: 'RU', name: 'Russia' },
+          { id: 15, code: 'ZA', name: 'South Africa' },
+          { id: 16, code: 'NL', name: 'Netherlands' },
+          { id: 17, code: 'BE', name: 'Belgium' },
+          { id: 18, code: 'CH', name: 'Switzerland' },
+          { id: 19, code: 'SE', name: 'Sweden' },
+          { id: 20, code: 'NO', name: 'Norway' },
+          { id: 21, code: 'DK', name: 'Denmark' },
+          { id: 22, code: 'FI', name: 'Finland' },
+          { id: 23, code: 'PL', name: 'Poland' },
+          { id: 24, code: 'AT', name: 'Austria' },
+          { id: 25, code: 'IE', name: 'Ireland' },
+          { id: 26, code: 'PT', name: 'Portugal' },
+          { id: 27, code: 'GR', name: 'Greece' },
+          { id: 28, code: 'CZ', name: 'Czech Republic' },
+          { id: 29, code: 'HU', name: 'Hungary' },
+          { id: 30, code: 'RO', name: 'Romania' },
+          { id: 31, code: 'NZ', name: 'New Zealand' },
+          { id: 32, code: 'SG', name: 'Singapore' },
+          { id: 33, code: 'HK', name: 'Hong Kong' },
+          { id: 34, code: 'KR', name: 'South Korea' },
+          { id: 35, code: 'TW', name: 'Taiwan' },
+          { id: 36, code: 'TH', name: 'Thailand' },
+          { id: 37, code: 'MY', name: 'Malaysia' },
+          { id: 38, code: 'ID', name: 'Indonesia' },
+          { id: 39, code: 'PH', name: 'Philippines' },
+          { id: 40, code: 'VN', name: 'Vietnam' },
+          { id: 41, code: 'AE', name: 'United Arab Emirates' },
+          { id: 42, code: 'SA', name: 'Saudi Arabia' },
+          { id: 43, code: 'IL', name: 'Israel' },
+          { id: 44, code: 'TR', name: 'Turkey' },
+          { id: 45, code: 'EG', name: 'Egypt' },
+          { id: 46, code: 'AR', name: 'Argentina' },
+          { id: 47, code: 'CL', name: 'Chile' },
+          { id: 48, code: 'CO', name: 'Colombia' },
+          { id: 49, code: 'PE', name: 'Peru' },
+          { id: 50, code: 'VE', name: 'Venezuela' }
+        ]
+
+        // Extend to 195 countries by adding more
+        for (let i = 51; i <= 195; i++) {
+          countries.push({
+            id: i,
+            code: `C${i}`,
+            name: `Country ${i}`
+          })
+        }
+
+        // Apply pagination
+        const paginatedCountries = countries.slice(offset, offset + pageSize)
+
+        return new Response(
+          200,
+          {},
+          {
+            records: paginatedCountries,
+            total: countries.length,
+            offset,
+            pageSize
+          }
+        )
+      })
     },
   })
 
