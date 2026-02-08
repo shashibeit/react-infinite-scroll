@@ -24,6 +24,9 @@ function Navbar() {
           <Button color="inherit" component={Link} to="/drag-drop">
             Drag & Drop
           </Button>
+          <Button color="inherit" component={Link} to="/document-preview">
+            Document Preview
+          </Button>
         </Box>
       </Toolbar>
     </AppBar>
