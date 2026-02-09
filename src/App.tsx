@@ -7,6 +7,7 @@ import Categories from './pages/Categories'
 import DragAndDrop from './pages/DragAndDrop'
 import QuestionDetails from './pages/QuestionDetails'
 import DocumentPreview from './pages/DocumentPreview'
+import QuestionApproval from './pages/QuestionApproval'
 import './App.css'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/categories" element={<Categories />} />
         <Route path="/drag-drop" element={<DragAndDrop />} />
         <Route path="/document-preview" element={<DocumentPreview />} />
+        <Route path="/question-approval" element={<QuestionApproval />} />
       </Routes>
     </Router>
   )

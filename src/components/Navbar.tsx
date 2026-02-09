@@ -27,6 +27,9 @@ function Navbar() {
           <Button color="inherit" component={Link} to="/document-preview">
             Document Preview
           </Button>
+          <Button color="inherit" component={Link} to="/question-approval">
+            Question Approval
+          </Button>
         </Box>
       </Toolbar>
     </AppBar>
