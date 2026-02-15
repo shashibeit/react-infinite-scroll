@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Box, Typography, Paper, Card, CardContent } from '@mui/material'
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 
 interface Question {
   id: number
@@ -39,72 +38,9 @@ function DragAndDrop() {
     return initialSections
   })
 
-  const [draggedSection, setDraggedSection] = useState<number | null>(null)
   const [draggedQuestion, setDraggedQuestion] = useState<{ sectionId: number; questionId: number } | null>(null)
-  const [dragOverSection, setDragOverSection] = useState<number | null>(null)
   const [dragOverQuestion, setDragOverQuestion] = useState<{ sectionId: number; questionId: number } | null>(null)
   const [reorderedQuestions, setReorderedQuestions] = useState<Set<number>>(new Set())
-
-  // Section drag handlers
-  const handleSectionDragStart = (e: React.DragEvent, sectionId: number) => {
-    setDraggedSection(sectionId)
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/html', e.currentTarget.innerHTML)
-  }
-
-  const handleSectionDragOver = (e: React.DragEvent, sectionId: number) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    if (draggedSection !== null && draggedSection !== sectionId) {
-      setDragOverSection(sectionId)
-    }
-  }
-
-  const handleSectionDragLeave = () => {
-    setDragOverSection(null)
-  }
-
-  const handleSectionDrop = (e: React.DragEvent, targetSectionId: number) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    // Check if we're dragging a question (prioritize question drops)
-    if (draggedQuestion) {
-      handleSectionDropForQuestion(e, targetSectionId)
-      return
-    }
-    
-    // Handle section drops
-    if (draggedSection === null || draggedSection === targetSectionId) {
-      setDragOverSection(null)
-      return
-    }
-
-    setSections(prevSections => {
-      const newSections = [...prevSections]
-      const draggedIndex = newSections.findIndex(s => s.id === draggedSection)
-      const targetIndex = newSections.findIndex(s => s.id === targetSectionId)
-      
-      // Remove dragged section
-      const [removed] = newSections.splice(draggedIndex, 1)
-      // Insert at target position
-      newSections.splice(targetIndex, 0, removed)
-      
-      // Update order numbers
-      return newSections.map((section, index) => ({
-        ...section,
-        order: index + 1
-      }))
-    })
-
-    setDraggedSection(null)
-    setDragOverSection(null)
-  }
-
-  const handleSectionDragEnd = () => {
-    setDraggedSection(null)
-    setDragOverSection(null)
-  }
 
   // Question drag handlers
   const handleQuestionDragStart = (e: React.DragEvent, sectionId: number, questionId: number) => {
@@ -117,9 +53,12 @@ function DragAndDrop() {
     e.preventDefault()
     e.stopPropagation()
     e.dataTransfer.dropEffect = 'move'
-    
-    if (draggedQuestion && 
-        (draggedQuestion.sectionId !== sectionId || draggedQuestion.questionId !== questionId)) {
+
+    if (
+      draggedQuestion &&
+      draggedQuestion.sectionId === sectionId &&
+      draggedQuestion.questionId !== questionId
+    ) {
       setDragOverQuestion({ sectionId, questionId })
     }
   }
@@ -140,47 +79,34 @@ function DragAndDrop() {
 
     const { sectionId: sourceSectionId, questionId: sourceQuestionId } = draggedQuestion
 
+    if (sourceSectionId !== targetSectionId) {
+      setDraggedQuestion(null)
+      setDragOverQuestion(null)
+      return
+    }
+
     setSections(prevSections => {
       const newSections = [...prevSections]
       const sourceSectionIndex = newSections.findIndex(s => s.id === sourceSectionId)
-      const targetSectionIndex = newSections.findIndex(s => s.id === targetSectionId)
       
-      if (sourceSectionIndex === -1 || targetSectionIndex === -1) return prevSections
+      if (sourceSectionIndex === -1) return prevSections
 
       const sourceSection = { ...newSections[sourceSectionIndex] }
-      const targetSection = { ...newSections[targetSectionIndex] }
 
       // Find question indices
       const sourceQuestionIndex = sourceSection.questions.findIndex(q => q.id === sourceQuestionId)
-      const targetQuestionIndex = targetSection.questions.findIndex(q => q.id === targetQuestionId)
+      const targetQuestionIndex = sourceSection.questions.findIndex(q => q.id === targetQuestionId)
 
       if (sourceQuestionIndex === -1 || targetQuestionIndex === -1) return prevSections
 
-      if (sourceSectionId === targetSectionId) {
-        // Same section - just reorder
-        const questions = [...sourceSection.questions]
-        const [removed] = questions.splice(sourceQuestionIndex, 1)
-        questions.splice(targetQuestionIndex, 0, removed)
-        
-        // Update order numbers
-        sourceSection.questions = questions.map((q, index) => ({ ...q, order: index + 1 }))
-        newSections[sourceSectionIndex] = sourceSection
-      } else {
-        // Different sections - add at the end of target section
-        const sourceQuestions = [...sourceSection.questions]
-        const targetQuestions = [...targetSection.questions]
-        
-        const [removed] = sourceQuestions.splice(sourceQuestionIndex, 1)
-        // Add at the end of target section
-        targetQuestions.push(removed)
-        
-        // Update order numbers
-        sourceSection.questions = sourceQuestions.map((q, index) => ({ ...q, order: index + 1 }))
-        targetSection.questions = targetQuestions.map((q, index) => ({ ...q, order: index + 1 }))
-        
-        newSections[sourceSectionIndex] = sourceSection
-        newSections[targetSectionIndex] = targetSection
-      }
+      // Same section - just reorder
+      const questions = [...sourceSection.questions]
+      const [removed] = questions.splice(sourceQuestionIndex, 1)
+      questions.splice(targetQuestionIndex, 0, removed)
+
+      // Update order numbers
+      sourceSection.questions = questions.map((q, index) => ({ ...q, order: index + 1 }))
+      newSections[sourceSectionIndex] = sourceSection
 
       return newSections
     })
@@ -198,92 +124,27 @@ function DragAndDrop() {
     setDragOverQuestion(null)
   }
 
-  // Handle dropping a question on section (not on specific question)
-  const handleSectionDropForQuestion = (e: React.DragEvent, targetSectionId: number) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    if (!draggedQuestion) return
-
-    const { sectionId: sourceSectionId, questionId: sourceQuestionId } = draggedQuestion
-    
-    // Don't do anything if dropping in the same section
-    if (sourceSectionId === targetSectionId) {
-      setDraggedQuestion(null)
-      setDragOverQuestion(null)
-      return
-    }
-
-    setSections(prevSections => {
-      const newSections = [...prevSections]
-      const sourceSectionIndex = newSections.findIndex(s => s.id === sourceSectionId)
-      const targetSectionIndex = newSections.findIndex(s => s.id === targetSectionId)
-      
-      if (sourceSectionIndex === -1 || targetSectionIndex === -1) return prevSections
-
-      const sourceSection = { ...newSections[sourceSectionIndex] }
-      const targetSection = { ...newSections[targetSectionIndex] }
-
-      const sourceQuestionIndex = sourceSection.questions.findIndex(q => q.id === sourceQuestionId)
-      if (sourceQuestionIndex === -1) return prevSections
-
-      // Remove from source section
-      const sourceQuestions = [...sourceSection.questions]
-      const targetQuestions = [...targetSection.questions]
-      
-      const [removed] = sourceQuestions.splice(sourceQuestionIndex, 1)
-      // Add at the end of target section
-      targetQuestions.push(removed)
-      
-      // Update order numbers
-      sourceSection.questions = sourceQuestions.map((q, index) => ({ ...q, order: index + 1 }))
-      targetSection.questions = targetQuestions.map((q, index) => ({ ...q, order: index + 1 }))
-      
-      newSections[sourceSectionIndex] = sourceSection
-      newSections[targetSectionIndex] = targetSection
-
-      return newSections
-    })
-
-    // Mark question as reordered
-    setReorderedQuestions(prev => new Set(prev).add(sourceQuestionId))
-
-    setDraggedQuestion(null)
-    setDragOverQuestion(null)
-  }
-
   return (
     <Box sx={{ width: '100%', padding: 3 }}>
       <Typography variant="h4" sx={{ mb: 2 }}>
-        Drag & Drop - Reorder Sections and Questions
+        Drag & Drop - Reorder Questions
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Drag sections to reorder them. Drag questions within or between sections to reorder.
+        Drag questions within the same section to reorder.
       </Typography>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {sections.map((section) => (
           <Paper
             key={section.id}
-            draggable
-            onDragStart={(e) => handleSectionDragStart(e, section.id)}
-            onDragOver={(e) => handleSectionDragOver(e, section.id)}
-            onDragLeave={handleSectionDragLeave}
-            onDrop={(e) => handleSectionDrop(e, section.id)}
-            onDragEnd={handleSectionDragEnd}
             sx={{
               p: 2,
-              cursor: 'grab',
-              backgroundColor: draggedSection === section.id ? '#e3f2fd' : '#fff',
-              border: dragOverSection === section.id ? '2px dashed #1976d2' : '1px solid #ddd',
+              backgroundColor: '#fff',
+              border: '1px solid #ddd',
               transition: 'all 0.2s ease',
-              '&:active': {
-                cursor: 'grabbing'
-              }
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <DragIndicatorIcon sx={{ mr: 1, color: '#666' }} />
               <Typography variant="h6">
                 {section.order}. {section.name}
               </Typography>
