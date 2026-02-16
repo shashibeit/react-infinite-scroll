@@ -24,7 +24,7 @@ export class DexieQuestionOrderRepository implements QuestionOrderRepository {
   async getFiltered(sectionId: string, filters: QuestionFilters): Promise<string[]> {
     const fullOrder = await this.getFullOrder(sectionId)
 
-    if (!filters.reviewType && !filters.participantType) {
+    if (!filters.reviewType && !filters.participantType && !filters.country) {
       return fullOrder
     }
 
@@ -54,6 +54,9 @@ export class DexieQuestionOrderRepository implements QuestionOrderRepository {
         return false
       }
       if (filters.participantType && question.participantType !== filters.participantType) {
+        return false
+      }
+      if (filters.country && question.country !== filters.country) {
         return false
       }
       return true

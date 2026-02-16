@@ -25,7 +25,7 @@ import { appDb, Question, ReviewType, ParticipantType, CountryType, Section } fr
 import { exportDbContent, resetDbWithMockData } from '../db/seed'
 import { DexieQuestionOrderRepository } from '../repositories/DexieQuestionOrderRepository'
 import { QuestionFilters } from '../repositories/QuestionOrderRepository'
-import { applyFilteredReorder } from '../utils/applyFilteredReorder'
+import { applyFilteredShift } from '../utils/applyFilteredShift'
 
 const reviewTypeOptions: ReviewType[] = ['Due Diligence', 'Periodic Review']
 const participantTypeOptions: ParticipantType[] = ['XY', 'PQR']
@@ -45,7 +45,7 @@ const reorderList = (items: string[], sourceId: string, targetId: string): strin
   return next
 }
 
-function QuestionOrder() {
+function SectionOrder() {
   // Swap to ApiQuestionOrderRepository when backend endpoints are ready.
   const repository = useMemo(() => new DexieQuestionOrderRepository(appDb), [])
 
@@ -59,7 +59,11 @@ function QuestionOrder() {
   const [dragOverQuestion, setDragOverQuestion] = useState<{ sectionId: string; questionId: string } | null>(null)
   const [reorderedQuestions, setReorderedQuestions] = useState<Set<string>>(new Set())
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [pendingDrop, setPendingDrop] = useState<{ targetQuestionId: string } | null>(null)
+  const [pendingDrop, setPendingDrop] = useState<{ 
+    sourceSectionId: string
+    sourceQuestionId: string
+    targetQuestionId: string 
+  } | null>(null)
   const [saving, setSaving] = useState(false)
   const [snackbar, setSnackbar] = useState<{
     open: boolean
@@ -174,7 +178,12 @@ function QuestionOrder() {
 
     // If filters are active, show confirmation dialog
     if (isFiltered) {
-      setPendingDrop({ targetQuestionId })
+      // Store all information in pendingDrop to survive dragEnd event
+      setPendingDrop({ 
+        sourceSectionId,
+        sourceQuestionId,
+        targetQuestionId 
+      })
       setConfirmDialogOpen(true)
       setDragOverQuestion(null)
       return
@@ -194,20 +203,10 @@ function QuestionOrder() {
 
     const nextFilteredOrder = reorderList(filteredOrder, sourceQuestionId, targetQuestionId)
     const nextFullOrder = isFiltered
-      ? applyFilteredReorder(fullOrder, filteredOrder, nextFilteredOrder)
+      ? applyFilteredShift(fullOrder, filteredOrder, nextFilteredOrder)
       : nextFilteredOrder
 
-    if (isFiltered) {
-      console.log('=== Filtered Reorder Logic ===')
-      console.log('Original full order:', fullOrder)
-      console.log('Filtered order (before):', filteredOrder)
-      console.log('Filtered order (after drag):', nextFilteredOrder)
-      console.log('Final full order:', nextFullOrder)
-      console.log('==============================')
-    }
-
     await repository.saveOrder(sourceSectionId, nextFullOrder)
-    console.log('Full order for section', sourceSectionId, ':', nextFullOrder)
 
     setReorderedQuestions((prev) => new Set(prev).add(sourceQuestionId))
     setDraggedQuestion(null)
@@ -217,16 +216,16 @@ function QuestionOrder() {
   }
 
   const handleConfirmReorder = async () => {
-    if (!draggedQuestion || !pendingDrop) {
+    if (!pendingDrop) {
       setConfirmDialogOpen(false)
       return
     }
 
-    const { sectionId: sourceSectionId, questionId: sourceQuestionId } = draggedQuestion
-    const { targetQuestionId } = pendingDrop
+    const { sourceSectionId, sourceQuestionId, targetQuestionId } = pendingDrop
 
     setConfirmDialogOpen(false)
     setPendingDrop(null)
+    setDraggedQuestion(null)
 
     await executeReorder(sourceSectionId, sourceQuestionId, targetQuestionId)
   }
@@ -240,27 +239,24 @@ function QuestionOrder() {
 
   const handleQuestionDragEnd = (e: React.DragEvent) => {
     e.stopPropagation()
+    // Clear drag state - pendingDrop will preserve info we need for confirmation
     setDraggedQuestion(null)
     setDragOverQuestion(null)
   }
 
   const handleExport = async () => {
     const payload = await exportDbContent(appDb)
-    console.log('DB export', payload)
     
-    // Create a downloadable JSON file
     const jsonString = JSON.stringify(payload, null, 2)
     const blob = new Blob([jsonString], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     
-    // Create a temporary link and trigger download
     const link = document.createElement('a')
     link.href = url
-    link.download = `question-order-export-${new Date().toISOString().split('T')[0]}.json`
+    link.download = `section-order-export-${new Date().toISOString().split('T')[0]}.json`
     document.body.appendChild(link)
     link.click()
     
-    // Cleanup
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
@@ -271,24 +267,18 @@ function QuestionOrder() {
     setSections(availableSections)
     setReorderedQuestions(new Set())
     setOriginalOrderMap({})
-    
-    console.log('Database reset complete. Sections:', availableSections.length)
-    const allQuestions = await appDb.questions.toArray()
-    console.log('Total questions loaded:', allQuestions.length)
-    console.log('Questions by participant type:', {
-      XY: allQuestions.filter(q => q.participantType === 'XY').length,
-      PQR: allQuestions.filter(q => q.participantType === 'PQR').length
-    })
   }
 
   const handleSaveToAPI = async () => {
     try {
       setSaving(true)
 
-      // Build the data structure with global order
+      // Build the output with global QuestionOrder
       let globalQuestionOrder = 1
-      const formattedData = {
-        sections: sectionData.map(({ section, fullOrder }) => ({
+      const formattedSections = []
+      
+      for (const { section, fullOrder } of sectionData) {
+        const formattedSection = {
           sectionID: section.id,  // Already numeric format from database
           questions: fullOrder.map((questionId) => {
             const formatted = {
@@ -298,24 +288,46 @@ function QuestionOrder() {
             globalQuestionOrder++
             return formatted
           })
-        }))
+        }
+        
+        formattedSections.push(formattedSection)
+      }
+      
+      const formattedData = {
+        sections: formattedSections
       }
 
-      console.log('=== POST Data (Question Order) ===')
-      console.log('Data Object:', formattedData)
-      console.log('JSON String:', JSON.stringify(formattedData, null, 2))
-      console.log('===================================')
+      console.log('=== POST Data to API ===')
+      console.log('Formatted Data Object:', formattedData)
+      console.log('POST Body (stringified):', JSON.stringify(formattedData, null, 2))
+      console.log('========================')
 
+      // TODO: Replace with your actual API endpoint
+      const response = await fetch('/api/section-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formattedData)
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log('Save successful:', result)
+      
       setSnackbar({
         open: true,
-        message: 'Data logged to console successfully!',
+        message: 'Section order saved successfully!',
         severity: 'success'
       })
     } catch (error) {
-      console.error('Error logging data:', error)
+      console.error('Error saving to API:', error)
       setSnackbar({
         open: true,
-        message: 'Failed to log data. Check console for details.',
+        message: 'Failed to save section order. Check console for details.',
         severity: 'error'
       })
     } finally {
@@ -330,7 +342,7 @@ function QuestionOrder() {
   return (
     <Box sx={{ width: '100%', padding: 3 }}>
       <Typography variant="h4" sx={{ mb: 2 }}>
-        Question Order Manager
+        Section Order Manager
       </Typography>
 
       {/* Confirmation Dialog */}
@@ -342,13 +354,13 @@ function QuestionOrder() {
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <WarningIcon color="warning" />
-          Confirm Reorder
+          Confirm Shift Order
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            You are reordering questions while filters are active. This action will change the <strong>final order of ALL questions</strong>, not just the filtered ones.
+            You are shifting questions while filters are active. This action will shift the <strong>final order of ALL questions</strong>, not just the filtered ones.
             <br /><br />
-            The questions not currently visible (due to filters) will be repositioned to maintain relative ordering.
+            The dragged question will be inserted at the new position, and all other questions will shift accordingly.
             <br /><br />
             Do you want to proceed?
           </DialogContentText>
@@ -362,9 +374,23 @@ function QuestionOrder() {
           </Button>
         </DialogActions>
       </Dialog>
+      
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Drag questions within sections to reorder. Apply filters to see specific question types. Changes persist in IndexedDB.
+        Drag and drop questions to shift their positions. When you drag a question to a new position, it will be inserted there and all other questions will shift accordingly. Apply filters to see specific question types. Changes persist in IndexedDB.
       </Typography>
+
+      <Paper sx={{ p: 2, mb: 3, backgroundColor: '#e8f5e9', border: '1px solid #4caf50' }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: '#2e7d32', mb: 1 }}>
+          💡 Shift Behavior Example:
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#1b5e20' }}>
+          If filtered questions show: <strong>4, 7, 8</strong>
+          <br />
+          And you drag <strong>8</strong> to the position of <strong>4</strong>
+          <br />
+          The new order will be: <strong>8, 4, 7</strong> (question 8 is inserted before 4, others shift down)
+        </Typography>
+      </Paper>
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
         <FormControl sx={{ minWidth: 220 }}>
@@ -441,7 +467,7 @@ function QuestionOrder() {
             onClick={handleSaveToAPI}
             disabled={saving}
           >
-            {saving ? 'Logging...' : 'Save to API'}
+            {saving ? 'Saving...' : 'Save to API'}
           </Button>
           <Button variant="outlined" onClick={handleExport}>
             Export JSON
@@ -629,4 +655,4 @@ function QuestionOrder() {
   )
 }
 
-export default QuestionOrder
+export default SectionOrder

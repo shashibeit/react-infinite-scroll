@@ -19,14 +19,16 @@ function QuestionBank() {
       return 0
     } else if (location.pathname.includes('/question-bank/ordering')) {
       return 1
-    } else if (location.pathname.includes('/question-bank/approval')) {
+    } else if (location.pathname.includes('/question-bank/section-order')) {
       return 2
+    } else if (location.pathname.includes('/question-bank/approval')) {
+      return 3
     }
     return 0
   }
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const routes = ['/question-bank/list', '/question-bank/ordering', '/question-bank/approval']
+    const routes = ['/question-bank/list', '/question-bank/ordering', '/question-bank/section-order', '/question-bank/approval']
     navigate(routes[newValue])
   }
 
@@ -46,6 +48,7 @@ function QuestionBank() {
           >
             <Tab label="Question List" />
             <Tab label="Question Ordering" />
+            <Tab label="Section Order" />
             <Tab label="Question Approval" />
           </Tabs>
         </Paper>

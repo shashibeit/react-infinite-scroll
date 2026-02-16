@@ -1,4 +1,4 @@
-import { AppDb, Question, Section, SectionQuestionOrder } from './appDb'
+import { AppDb, Question, Section, SectionQuestionOrder, CountryType, ReviewType, ParticipantType } from './appDb'
 
 export interface DbExport {
   sections: Section[]
@@ -8,94 +8,89 @@ export interface DbExport {
 
 export const resetDbWithMockData = async (db: AppDb): Promise<void> => {
   const sections: Section[] = [
-    { id: 'sec-1', title: 'Customer Onboarding' },
-    { id: 'sec-2', title: 'Risk Review' }
+    { id: '1', title: 'Customer Onboarding' },
+    { id: '2', title: 'Risk Assessment' },
+    { id: '3', title: 'Compliance Review' },
+    { id: '4', title: 'Financial Analysis' },
+    { id: '5', title: 'Data Privacy' },
+    { id: '6', title: 'Operational Due Diligence' },
+    { id: '7', title: 'IT Security' },
+    { id: '8', title: 'Legal Documentation' },
+    { id: '9', title: 'Background Checks' },
+    { id: '10', title: 'Anti-Money Laundering' },
+    { id: '11', title: 'Market Analysis' },
+    { id: '12', title: 'Regulatory Compliance' },
+    { id: '13', title: 'Third Party Validation' }
   ]
 
   const questions: Question[] = []
   const sectionQuestionOrder: SectionQuestionOrder[] = []
+  
+  // Global question counter for QID format
+  let globalQuestionCounter = 1
 
-  const section1Questions = [
-    'Describe the current onboarding workflow.',
-    'Which systems are used for onboarding?',
-    'What is the average onboarding time?',
-    'Who approves onboarding steps?',
-    'List any onboarding bottlenecks.'
+  const reviewTypes: ReviewType[] = ['Due Diligence', 'Periodic Review']
+  const participantTypes: ParticipantType[] = ['XY', 'PQR']
+  const countries: CountryType[] = ['USA', 'UK', 'India', 'Canada']
+
+  // Sample question templates
+  const questionTemplates = [
+    'What is the current process for {topic}?',
+    'How is {topic} documented and maintained?',
+    'Who is responsible for {topic}?',
+    'What are the key controls for {topic}?',
+    'How often is {topic} reviewed?',
+    'What tools are used for {topic}?',
+    'Describe the approval process for {topic}.',
+    'What are the escalation procedures for {topic}?',
+    'How is {topic} monitored and reported?',
+    'What compliance requirements apply to {topic}?',
+    'What training is provided for {topic}?',
+    'How are exceptions handled in {topic}?',
+    'What metrics are tracked for {topic}?',
+    'Describe the workflow for {topic}.',
+    'What documentation is required for {topic}?'
   ]
 
-  const section1QuestionsPQR = [
-    'What documentation is required for PQR onboarding?',
-    'How is PQR identity verification performed?',
-    'What is the approval hierarchy for PQR onboarding?',
-    'What compliance checks are mandatory for PQR?',
-    'How long does PQR onboarding typically take?',
-    'What follow-up actions are required after PQR onboarding?'
-  ]
+  // Helper to get random element from array
+  const getRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 
-  const section2Questions = [
-    'How often are risk reviews conducted?',
-    'Who signs off on risk findings?',
-    'What is the escalation path for risks?',
-    'Which tools are used for risk tracking?'
-  ]
-
-  const addQuestions = (
-    sectionId: string,
-    entries: string[],
-    reviewType: Question['reviewType'],
-    participantType: Question['participantType'],
-    idPrefix: string
-  ) => {
-    entries.forEach((text, index) => {
-      const questionId = `${sectionId}-${idPrefix}-q${index + 1}`
+  // Generate questions for each section
+  sections.forEach((section) => {
+    const numQuestions = 5 + Math.floor(Math.random() * 6) // 5-10 questions per section
+    
+    for (let i = 0; i < numQuestions; i++) {
+      const questionId = `QID${String(globalQuestionCounter).padStart(4, '0')}`
+      globalQuestionCounter++
+      
+      const template = getRandom(questionTemplates)
+      const text = template.replace('{topic}', section.title.toLowerCase())
+      
       questions.push({
         id: questionId,
-        sectionId,
+        sectionId: section.id,
         text,
-        reviewType,
-        participantType,
-        status: index % 2 === 0 ? 'APPROVED' : 'REVIEW'
+        reviewType: getRandom(reviewTypes),
+        participantType: getRandom(participantTypes),
+        country: getRandom(countries),
+        status: Math.random() > 0.3 ? 'APPROVED' : 'REVIEW'
       })
-    })
-  }
-
-  // Add all questions for each section
-  addQuestions('sec-1', section1Questions, 'Due Diligence', 'XY', 'xy')
-  addQuestions('sec-1', section1QuestionsPQR, 'Due Diligence', 'PQR', 'pqr')
-  addQuestions('sec-2', section2Questions, 'Periodic Review', 'PQR', 'pqr')
-
-  // Group questions by section and participant type
-  const sec1XY = questions.filter(q => q.sectionId === 'sec-1' && q.participantType === 'XY')
-  const sec1PQR = questions.filter(q => q.sectionId === 'sec-1' && q.participantType === 'PQR')
-  const sec2Questions = questions.filter(q => q.sectionId === 'sec-2')
-
-  // Custom order for Customer Onboarding (sec-1):
-  // 2 XY, 2 PQR, 1 XY, 1 PQR, 2 PQR, 2 XY, remaining PQR
-  const sec1OrderedQuestions = [
-    ...sec1XY.slice(0, 2),    // First 2 XY
-    ...sec1PQR.slice(0, 2),   // Next 2 PQR
-    ...sec1XY.slice(2, 3),    // Then 1 XY
-    ...sec1PQR.slice(2, 3),   // Then 1 PQR
-    ...sec1PQR.slice(3, 5),   // 2 PQR
-    ...sec1XY.slice(3, 5),    // 2 XY
-    ...sec1PQR.slice(5)       // Remaining PQR
-  ]
-
-  // Assign order indices for Customer Onboarding
-  sec1OrderedQuestions.forEach((question, index) => {
-    sectionQuestionOrder.push({
-      sectionId: 'sec-1',
-      questionId: question.id,
-      orderIndex: index + 1
-    })
+    }
   })
 
-  // Assign order indices for sec-2 (sequential)
-  sec2Questions.forEach((question, index) => {
-    sectionQuestionOrder.push({
-      sectionId: 'sec-2',
-      questionId: question.id,
-      orderIndex: index + 1
+  // Create random order for each section
+  sections.forEach((section) => {
+    const sectionQuestions = questions.filter(q => q.sectionId === section.id)
+    
+    // Shuffle questions randomly
+    const shuffled = [...sectionQuestions].sort(() => Math.random() - 0.5)
+    
+    shuffled.forEach((question, index) => {
+      sectionQuestionOrder.push({
+        sectionId: section.id,
+        questionId: question.id,
+        orderIndex: index + 1
+      })
     })
   })
 

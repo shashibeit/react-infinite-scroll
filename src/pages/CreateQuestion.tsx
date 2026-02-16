@@ -20,14 +20,12 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
-import { appDb, Section, ReviewType, ParticipantType } from '../db/appDb'
+import { appDb, Section, ReviewType, ParticipantType, CountryType } from '../db/appDb'
 import { useAppSelector } from '../store/hooks'
 
 type ResponseType = 'Multi select' | 'Single Select' | 'Text' | 'Input' | 'Paragraph' | ''
 
-const countryOptions = [
-  'USA', 'UK', 'Canada', 'Germany', 'France', 'India', 'Australia', 'Japan', 'China', 'Brazil'
-]
+const countryOptions: CountryType[] = ['USA', 'UK', 'India', 'Canada']
 
 function CreateQuestion() {
   const { userRole } = useAppSelector((state) => state.auth)
@@ -38,11 +36,11 @@ function CreateQuestion() {
     sectionId: '',
     reviewType: '' as ReviewType | '',
     participantType: '' as ParticipantType | '',
+    country: '' as CountryType | '',
     status: 'REVIEW' as const,
     isActive: true,
     isDefaultQuestion: false,
-    responseType: '' as ResponseType,
-    country: ''
+    responseType: '' as ResponseType
   })
   const [options, setOptions] = useState<string[]>(['', ''])
 
@@ -58,7 +56,7 @@ function CreateQuestion() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.text || !formData.sectionId || !formData.reviewType || !formData.participantType || !formData.responseType) {
+    if (!formData.text || !formData.sectionId || !formData.reviewType || !formData.participantType || !formData.country || !formData.responseType) {
       alert('Please fill in all required fields')
       return
     }
@@ -81,6 +79,7 @@ function CreateQuestion() {
         sectionId: formData.sectionId,
         reviewType: formData.reviewType as ReviewType,
         participantType: formData.participantType as ParticipantType,
+        country: formData.country as CountryType,
         status: formData.status,
         createdBy: userRole || 'Unknown',
         createdAt: new Date().toISOString()
@@ -212,7 +211,7 @@ function CreateQuestion() {
               <Select
                 value={formData.country}
                 label="Country"
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value as CountryType })}
               >
                 <MenuItem value="">
                   <em>None</em>

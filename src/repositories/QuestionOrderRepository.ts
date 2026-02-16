@@ -1,8 +1,9 @@
-import { ParticipantType, ReviewType } from '../db/appDb'
+import { ParticipantType, ReviewType, CountryType } from '../db/appDb'
 
 export interface QuestionFilters {
   reviewType?: ReviewType
   participantType?: ParticipantType
+  country?: CountryType
 }
 
 export interface QuestionOrderRepository {

@@ -2,6 +2,7 @@ import Dexie, { Table } from 'dexie'
 
 export type ReviewType = 'Due Diligence' | 'Periodic Review'
 export type ParticipantType = 'XY' | 'PQR'
+export type CountryType = 'USA' | 'UK' | 'India' | 'Canada'
 export type QuestionStatus = 'APPROVED' | 'REVIEW' | 'CANCELLED'
 
 export interface Section {
@@ -15,6 +16,7 @@ export interface Question {
   text: string
   reviewType: ReviewType
   participantType: ParticipantType
+  country: CountryType
   status: QuestionStatus
   createdBy?: string
   createdAt?: string
@@ -50,6 +52,21 @@ export class AppDb extends Dexie {
           tx.table('questions').update(q.id, {
             createdBy: 'System',
             createdAt: new Date().toISOString()
+          })
+        )
+      )
+    })
+    this.version(3).stores({
+      sections: 'id',
+      questions: 'id, sectionId, reviewType, participantType, country, status, createdBy',
+      sectionQuestionOrder: '[sectionId+questionId], sectionId, orderIndex'
+    }).upgrade(async tx => {
+      // Add country field to existing questions
+      const questions = await tx.table('questions').toArray()
+      await Promise.all(
+        questions.map(q => 
+          tx.table('questions').update(q.id, {
+            country: 'USA'  // Default country for existing questions
           })
         )
       )

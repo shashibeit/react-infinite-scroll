@@ -9,6 +9,7 @@ import QuestionBank from './pages/QuestionBank'
 import QuestionBankList from './pages/QuestionBankList'
 import CreateQuestion from './pages/CreateQuestion'
 import QuestionOrder from './pages/QuestionOrder'
+import SectionOrder from './pages/SectionOrder'
 import QuestionApproval from './pages/QuestionApproval'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { restoreAuth, type UserRole } from './store/authSlice'
@@ -73,6 +74,7 @@ function App() {
         }>
           <Route path="list" element={<QuestionBankList />} />
           <Route path="ordering" element={<QuestionOrder />} />
+          <Route path="section-order" element={<SectionOrder />} />
           <Route path="approval" element={<QuestionApproval />} />
           <Route path="create" element={<CreateQuestion />} />
         </Route>
