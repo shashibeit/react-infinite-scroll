@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Box,
   Button,
@@ -21,10 +21,7 @@ import {
 } from '@mui/material'
 import WarningIcon from '@mui/icons-material/Warning'
 import SaveIcon from '@mui/icons-material/Save'
-import { appDb, Question, ReviewType, ParticipantType, CountryType, Section } from '../db/appDb'
-import { exportDbContent, resetDbWithMockData } from '../db/seed'
-import { DexieQuestionOrderRepository } from '../repositories/DexieQuestionOrderRepository'
-import { QuestionFilters } from '../repositories/QuestionOrderRepository'
+import { mockApi, Question, ReviewType, ParticipantType, CountryType, Section, QuestionFilters } from '../services/mockApi'
 import { applyFilteredReorder } from '../utils/applyFilteredReorder'
 
 const reviewTypeOptions: ReviewType[] = ['Due Diligence', 'Periodic Review']
@@ -46,9 +43,6 @@ const reorderList = (items: string[], sourceId: string, targetId: string): strin
 }
 
 function QuestionOrder() {
-  // Swap to ApiQuestionOrderRepository when backend endpoints are ready.
-  const repository = useMemo(() => new DexieQuestionOrderRepository(appDb), [])
-
   const [sections, setSections] = useState<Section[]>([])
   const [filters, setFilters] = useState<QuestionFilters>({})
   const [sectionData, setSectionData] = useState<
@@ -76,20 +70,18 @@ function QuestionOrder() {
 
       const data = await Promise.all(
         sections.map(async (section) => {
-          const allQuestions: Question[] = await appDb.questions.where('sectionId').equals(section.id).toArray()
+          // Get all questions for this section from API
+          const allQuestions: Question[] = await mockApi.getQuestionsBySection(section.id)
           const questionLookup: Record<string, Question> = {}
           allQuestions.forEach((question: Question) => {
             questionLookup[question.id] = question
           })
 
-          // Get filtered order for display
-          const filteredOrder = await repository.getFiltered(section.id, nextFilters)
-          const orderedQuestions = filteredOrder
-            .map((questionId) => questionLookup[questionId])
-            .filter((question): question is Question => Boolean(question))
+          // Get filtered questions from API
+          const filteredQuestions = await mockApi.getFilteredQuestions(section.id, nextFilters)
 
-          // Always get full order for Final Order display
-          const fullOrder = await repository.getFullOrder(section.id)
+          // Get full order from API
+          const fullOrder = await mockApi.getSectionOrder(section.id)
 
           // Store original order on first load
           if (!preserveOriginalOrder && !originalOrderMap[section.id]) {
@@ -100,22 +92,18 @@ function QuestionOrder() {
             setOriginalOrderMap((prev) => ({ ...prev, [section.id]: originalPositions }))
           }
 
-          return { section, orderedQuestions, fullOrder, fullQuestionMap: questionLookup }
+          return { section, orderedQuestions: filteredQuestions, fullOrder, fullQuestionMap: questionLookup }
         })
       )
 
       setSectionData(data)
     },
-    [repository, sections, originalOrderMap]
+    [sections, originalOrderMap]
   )
 
   useEffect(() => {
     const initialize = async () => {
-      if ((await appDb.sections.count()) === 0) {
-        await resetDbWithMockData(appDb)
-      }
-
-      const availableSections = await appDb.sections.toArray()
+      const availableSections = await mockApi.getSections()
       setSections(availableSections)
     }
 
@@ -189,8 +177,8 @@ function QuestionOrder() {
     sourceQuestionId: string,
     targetQuestionId: string
   ) => {
-    const fullOrder = await repository.getFullOrder(sourceSectionId)
-    const filteredOrder = await repository.getFiltered(sourceSectionId, filters)
+    const fullOrder = await mockApi.getSectionOrder(sourceSectionId)
+    const filteredOrder = await mockApi.getFilteredQuestionIds(sourceSectionId, filters)
 
     const nextFilteredOrder = reorderList(filteredOrder, sourceQuestionId, targetQuestionId)
     const nextFullOrder = isFiltered
@@ -206,7 +194,7 @@ function QuestionOrder() {
       console.log('==============================')
     }
 
-    await repository.saveOrder(sourceSectionId, nextFullOrder)
+    await mockApi.saveSectionOrder(sourceSectionId, nextFullOrder)
     console.log('Full order for section', sourceSectionId, ':', nextFullOrder)
 
     setReorderedQuestions((prev) => new Set(prev).add(sourceQuestionId))
@@ -245,8 +233,8 @@ function QuestionOrder() {
   }
 
   const handleExport = async () => {
-    const payload = await exportDbContent(appDb)
-    console.log('DB export', payload)
+    const payload = await mockApi.exportData()
+    console.log('Data export', payload)
     
     // Create a downloadable JSON file
     const jsonString = JSON.stringify(payload, null, 2)
@@ -266,14 +254,14 @@ function QuestionOrder() {
   }
 
   const handleReset = async () => {
-    await resetDbWithMockData(appDb)
-    const availableSections = await appDb.sections.toArray()
+    await mockApi.resetData()
+    const availableSections = await mockApi.getSections()
     setSections(availableSections)
     setReorderedQuestions(new Set())
     setOriginalOrderMap({})
     
-    console.log('Database reset complete. Sections:', availableSections.length)
-    const allQuestions = await appDb.questions.toArray()
+    console.log('Data reset complete. Sections:', availableSections.length)
+    const allQuestions = await mockApi.getQuestions()
     console.log('Total questions loaded:', allQuestions.length)
     console.log('Questions by participant type:', {
       XY: allQuestions.filter(q => q.participantType === 'XY').length,
@@ -363,7 +351,7 @@ function QuestionOrder() {
         </DialogActions>
       </Dialog>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Drag questions within sections to reorder. Apply filters to see specific question types. Changes persist in IndexedDB.
+        Drag questions within sections to reorder. Apply filters to see specific question types. Data fetched from Mock API.
       </Typography>
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
