@@ -1,4 +1,97 @@
-import { Server, Response } from 'miragejs'
+import { Server, Response, Model, Factory } from 'miragejs'
+
+// Types for Mirage models
+export interface Question {
+  id: string
+  text: string
+  reviewType: 'Due Diligence' | 'Periodic Review'
+  participantType: 'XY' | 'PQR'
+  country: 'USA' | 'UK' | 'India' | 'Canada'
+  order: number
+  sectionId: number
+}
+
+export interface Section {
+  id: number
+  name: string
+}
+
+// Models for question order
+export const questionOrderModels = {
+  question: Model.extend<Partial<Question>>({}),
+  section: Model.extend<Partial<Section>>({}),
+}
+
+// Factories for question order
+export const questionOrderFactories = {
+  section: Factory.extend({
+    id(i: number) {
+      return i + 1
+    },
+    name(i: number) {
+      return `Section ${i + 1}`
+    },
+  }),
+
+  question: Factory.extend({
+    id(i: number) {
+      return `QID${String(i + 1).padStart(4, '0')}`
+    },
+    text(i: number) {
+      const templates = [
+        'What is your risk assessment?',
+        'Describe your compliance process',
+        'How do you handle data privacy?',
+        'What are your security measures?',
+        'Explain your audit procedures',
+        'What is your incident response plan?',
+        'How do you manage vendor risks?',
+        'Describe your training program',
+        'What are your monitoring procedures?',
+        'How do you ensure regulatory compliance?',
+      ]
+      return templates[i % templates.length]
+    },
+    reviewType() {
+      return Math.random() > 0.5 ? 'Due Diligence' : 'Periodic Review'
+    },
+    participantType() {
+      return Math.random() > 0.5 ? 'XY' : 'PQR'
+    },
+    country() {
+      const countries = ['USA', 'UK', 'India', 'Canada']
+      return countries[Math.floor(Math.random() * countries.length)]
+    },
+    sectionId(i: number) {
+      return (i % 13) + 1
+    },
+    order(i: number) {
+      return i + 1
+    },
+  }),
+}
+
+// Seed function for question order data
+export function seedQuestionOrderData(server: any) {
+  // Create 13 sections
+  for (let i = 0; i < 13; i++) {
+    server.create('section', { id: String(i + 1), name: `Section ${i + 1}` } as any)
+  }
+
+  // Create questions for each section (random 5-10 per section)
+  let questionCounter = 0
+  for (let sectionId = 1; sectionId <= 13; sectionId++) {
+    const numQuestions = Math.floor(Math.random() * 6) + 5 // 5 to 10 questions
+    for (let q = 0; q < numQuestions; q++) {
+      server.create('question', {
+        id: `QID${String(questionCounter + 1).padStart(4, '0')}`,
+        sectionId,
+        order: q + 1,
+      } as any)
+      questionCounter++
+    }
+  }
+}
 
 export function registerQuestionOrderRoutes(server: Server) {
   // GET /api/question-order?reviewType=...&participantType=...&country=...
@@ -124,23 +217,8 @@ export function registerQuestionOrderRoutes(server: Server) {
     schema.all('question').models.forEach(q => q.destroy())
     schema.all('section').models.forEach(s => s.destroy())
 
-    // Re-seed
-    for (let i = 0; i < 13; i++) {
-      schema.create('section', { id: String(i + 1), name: `Section ${i + 1}` } as any)
-    }
-
-    let questionCounter = 0
-    for (let sectionId = 1; sectionId <= 13; sectionId++) {
-      const numQuestions = Math.floor(Math.random() * 6) + 5
-      for (let q = 0; q < numQuestions; q++) {
-        schema.create('question', {
-          id: `QID${String(questionCounter + 1).padStart(4, '0')}`,
-          sectionId,
-          order: q + 1,
-        } as any)
-        questionCounter++
-      }
-    }
+    // Re-seed using the shared seed function
+    seedQuestionOrderData((server as any).schema)
 
     return new Response(
       200,
