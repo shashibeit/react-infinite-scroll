@@ -13,7 +13,7 @@ export interface QuestionFilters {
 
 // Question item in API response
 export interface QuestionOrderItem {
-  questionSeqNo: number
+  questionOrderId: number
   questionID: string
   questionText: string
   reviewType?: string
@@ -24,7 +24,7 @@ export interface QuestionOrderItem {
 
 // Section item in API response
 export interface SectionOrderItem {
-  sectionSeqNo: number
+  sectionOrderId: number
   sectionID: number
   sectionName: string
   questions: QuestionOrderItem[]
@@ -217,7 +217,7 @@ const questionOrderSlice = createSlice({
             
             // Update sequence numbers
             questions.forEach((q, idx) => {
-              q.questionSeqNo = idx + 1
+              q.questionOrderId = idx + 1
             })
             
             state.data.filteredSections[sectionIndex].questions = questions

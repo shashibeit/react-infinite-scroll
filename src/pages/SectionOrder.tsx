@@ -167,7 +167,7 @@ function SectionOrder() {
     // Create updated questions array with new order
     const updatedQuestions = nextFullOrder.map((qId, idx) => {
       const originalQ = section.questions.find(q => q.questionID === qId)!
-      return { ...originalQ, questionSeqNo: idx + 1 }
+      return { ...originalQ, questionOrderId: idx + 1 }
     })
 
     // Update Redux state

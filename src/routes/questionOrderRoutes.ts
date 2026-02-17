@@ -125,7 +125,7 @@ export function registerQuestionOrderRoutes(server: Server) {
       const questions = (sectionMap[sectionId] || [])
         .sort((a, b) => Number((a as any).order) - Number((b as any).order))
         .map((q, idx) => ({
-          questionSeqNo: idx + 1,
+          questionOrderId: idx + 1,
           questionID: (q as any).id,
           questionText: (q as any).text,
           reviewType: (q as any).reviewType,
@@ -135,7 +135,7 @@ export function registerQuestionOrderRoutes(server: Server) {
         }))
 
       return {
-        sectionSeqNo: sectionId,
+        sectionOrderId: sectionId,
         sectionID: sectionId,
         sectionName: (section as any).name,
         questions,
@@ -157,7 +157,7 @@ export function registerQuestionOrderRoutes(server: Server) {
               })
               .sort((a, b) => Number((a as any).order) - Number((b as any).order))
               .map((q, idx) => ({
-                questionSeqNo: idx + 1,
+                questionOrderId: idx + 1,
                 questionID: (q as any).id,
                 questionText: (q as any).text,
                 reviewType: (q as any).reviewType,
@@ -167,7 +167,7 @@ export function registerQuestionOrderRoutes(server: Server) {
               }))
 
             return {
-              sectionSeqNo: sectionId,
+              sectionOrderId: sectionId,
               sectionID: sectionId,
               sectionName: (section as any).name,
               questions: filteredQuestions,
