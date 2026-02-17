@@ -1,4 +1,5 @@
 import { createServer, Response, Model, Factory } from 'miragejs'
+import { registerQuestionOrderRoutes } from './routes/questionOrderRoutes'
 
 interface ServerConfig {
   environment?: string
@@ -80,7 +81,7 @@ export function makeServer({ environment = 'development' }: ServerConfig = {}) {
     seeds(server) {
       // Create 13 sections
       for (let i = 0; i < 13; i++) {
-        server.create('section', { id: i + 1, name: `Section ${i + 1}` })
+        server.create('section', { id: String(i + 1), name: `Section ${i + 1}` } as any)
       }
 
       // Create questions for each section (random 5-10 per section)
@@ -92,7 +93,7 @@ export function makeServer({ environment = 'development' }: ServerConfig = {}) {
             id: `QID${String(questionCounter + 1).padStart(4, '0')}`,
             sectionId,
             order: q + 1,
-          })
+          } as any)
           questionCounter++
         }
       }
@@ -102,148 +103,8 @@ export function makeServer({ environment = 'development' }: ServerConfig = {}) {
       this.namespace = 'api'
       this.timing = 500 // Simulate network delay
 
-      // ========== Question Order Routes ==========
-
-      // GET /api/question-order?reviewType=...&participantType=...&country=...
-      this.get('/question-order', (schema, request) => {
-        const { reviewType, participantType, country } = request.queryParams as Record<string, string>
-        
-        const hasFilters = Boolean(reviewType || participantType || country)
-
-        // Get all questions grouped by section
-        const allQuestions = schema.all('question').models
-        const sections = schema.all('section').models
-
-        // Group questions by section
-        const sectionMap: Record<number, any[]> = {}
-        sections.forEach(section => {
-          sectionMap[section.id as number] = []
-        })
-
-        allQuestions.forEach(q => {
-          const sectionId = q.sectionId as number
-          if (sectionMap[sectionId]) {
-            sectionMap[sectionId].push(q)
-          }
-        })
-
-        // Build response with all sections
-        const allSectionsData = sections.map(section => {
-          const sectionId = section.id as number
-          const questions = (sectionMap[sectionId] || [])
-            .sort((a, b) => (a.order as number) - (b.order as number))
-            .map((q, idx) => ({
-              questionSeqNo: idx + 1,
-              questionID: q.id,
-              questionText: q.text,
-            }))
-
-          return {
-            sectionSeqNo: sectionId,
-            sectionID: sectionId,
-            sectionName: section.name,
-            questions,
-          }
-        })
-
-        // Build filtered sections if filters are active
-        const filteredSectionsData = hasFilters
-          ? sections
-              .map(section => {
-                const sectionId = section.id as number
-                const filteredQuestions = (sectionMap[sectionId] || [])
-                  .filter(q => {
-                    if (reviewType && q.reviewType !== reviewType) return false
-                    if (participantType && q.participantType !== participantType) return false
-                    if (country && q.country !== country) return false
-                    return true
-                  })
-                  .sort((a, b) => (a.order as number) - (b.order as number))
-                  .map((q, idx) => ({
-                    questionSeqNo: idx + 1,
-                    questionID: q.id,
-                    questionText: q.text,
-                  }))
-
-                return {
-                  sectionSeqNo: sectionId,
-                  sectionID: sectionId,
-                  sectionName: section.name,
-                  questions: filteredQuestions,
-                }
-              })
-              .filter(section => section.questions.length > 0)
-          : []
-
-        return new Response(
-          200,
-          {},
-          {
-            status: 'SUCCESS',
-            filteredSections: filteredSectionsData,
-            sections: allSectionsData,
-          }
-        )
-      })
-
-      // POST /api/question-order (save order)
-      this.post('/question-order', (schema, request) => {
-        const body = JSON.parse(request.requestBody)
-        console.log('Mirage: Saving question order:', body)
-
-        // Update the order in the database
-        body.sections?.forEach((section: any) => {
-          section.questions?.forEach((question: any, index: number) => {
-            const q = schema.findBy('question', { id: question.questionID })
-            if (q) {
-              q.update({ order: index + 1 })
-            }
-          })
-        })
-
-        return new Response(
-          200,
-          {},
-          {
-            status: 'SUCCESS',
-            message: 'Question order saved successfully',
-          }
-        )
-      })
-
-      // POST /api/question-order/reset (reset to initial state)
-      this.post('/question-order/reset', (schema) => {
-        // Clear all questions and sections
-        schema.all('question').models.forEach(q => q.destroy())
-        schema.all('section').models.forEach(s => s.destroy())
-
-        // Re-seed
-        for (let i = 0; i < 13; i++) {
-          schema.create('section', { id: i + 1, name: `Section ${i + 1}` })
-        }
-
-        let questionCounter = 0
-        for (let sectionId = 1; sectionId <= 13; sectionId++) {
-          const numQuestions = Math.floor(Math.random() * 6) + 5
-          for (let q = 0; q < numQuestions; q++) {
-            schema.create('question', {
-              id: `QID${String(questionCounter + 1).padStart(4, '0')}`,
-              sectionId,
-              order: q + 1,
-            })
-            questionCounter++
-          }
-        }
-
-        return new Response(
-          200,
-          {},
-          {
-            status: 'SUCCESS',
-            message: 'Data reset successfully',
-          }
-        )
-      })
+      // Register Question Order Routes
+      registerQuestionOrderRoutes(this)
 
       // ========== Existing Routes ==========
 
