@@ -34,6 +34,10 @@ export function registerQuestionOrderRoutes(server: Server) {
           questionSeqNo: idx + 1,
           questionID: (q as any).id,
           questionText: (q as any).text,
+          reviewType: (q as any).reviewType,
+          participantType: (q as any).participantType,
+          country: (q as any).country,
+          status: (q as any).status,
         }))
 
       return {
@@ -62,6 +66,10 @@ export function registerQuestionOrderRoutes(server: Server) {
                 questionSeqNo: idx + 1,
                 questionID: (q as any).id,
                 questionText: (q as any).text,
+                reviewType: (q as any).reviewType,
+                participantType: (q as any).participantType,
+                country: (q as any).country,
+                status: (q as any).status,
               }))
 
             return {

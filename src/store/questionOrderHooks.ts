@@ -11,9 +11,9 @@ import {
   reorderFilteredQuestions,
   markAsSaved,
   clearError,
-  QuestionOrderItem
+  QuestionOrderItem,
+  QuestionFilters
 } from './questionOrderSlice'
-import { QuestionFilters } from '../services/mockApi'
 
 // Typed hooks for Redux
 export const useAppDispatch = () => useDispatch<AppDispatch>()

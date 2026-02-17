@@ -1,7 +1,17 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import { QuestionFilters } from '../services/mockApi'
 
-// Types matching backend API response
+// API Types for Question Order Management
+// These types represent your actual API contracts
+
+// Filter parameters sent to GET /api/question-order
+// Note: Values come from dynamic dropdowns, not predefined sets
+export interface QuestionFilters {
+  reviewType?: string
+  participantType?: string
+  country?: string
+}
+
+// Question item in API response
 export interface QuestionOrderItem {
   questionSeqNo: number
   questionID: string
@@ -12,6 +22,7 @@ export interface QuestionOrderItem {
   status?: string
 }
 
+// Section item in API response
 export interface SectionOrderItem {
   sectionSeqNo: number
   sectionID: number
@@ -19,11 +30,23 @@ export interface SectionOrderItem {
   questions: QuestionOrderItem[]
 }
 
+// Complete API response from GET /api/question-order
 export interface QuestionOrderResponse {
   status: 'SUCCESS' | 'ERROR'
   filteredSections: SectionOrderItem[]
   sections: SectionOrderItem[]
   message?: string
+}
+
+// Request body for POST /api/question-order (save)
+export interface SaveQuestionOrderRequest {
+  sections: {
+    sectionID: number
+    questions: {
+      questionID: string
+      QuestionOrder: number
+    }[]
+  }[]
 }
 
 interface QuestionOrderState {

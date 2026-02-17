@@ -22,12 +22,12 @@ import {
 import WarningIcon from '@mui/icons-material/Warning'
 import SaveIcon from '@mui/icons-material/Save'
 import { useQuestionOrder } from '../store/questionOrderHooks'
-import { ReviewType, ParticipantType, CountryType } from '../services/mockApi'
 import { applyFilteredShift } from '../utils/applyFilteredShift'
 
-const reviewTypeOptions: ReviewType[] = ['Due Diligence', 'Periodic Review']
-const participantTypeOptions: ParticipantType[] = ['XY', 'PQR']
-const countryOptions: CountryType[] = ['USA', 'UK', 'India', 'Canada']
+// Note: These options should ideally come from an API endpoint
+const reviewTypeOptions: string[] = ['Due Diligence', 'Periodic Review']
+const participantTypeOptions: string[] = ['XY', 'PQR']
+const countryOptions: string[] = ['USA', 'UK', 'India', 'Canada']
 
 function SectionOrder() {
   // Redux state and actions
@@ -346,7 +346,7 @@ function SectionOrder() {
             onChange={(event) => {
               const newFilters = {
                 ...filters,
-                reviewType: event.target.value ? (event.target.value as ReviewType) : undefined
+                reviewType: event.target.value || undefined
               }
               updateFilters(newFilters)
             }}
@@ -369,7 +369,7 @@ function SectionOrder() {
             onChange={(event) => {
               const newFilters = {
                 ...filters,
-                participantType: event.target.value ? (event.target.value as ParticipantType) : undefined
+                participantType: event.target.value || undefined
               }
               updateFilters(newFilters)
             }}
@@ -392,7 +392,7 @@ function SectionOrder() {
             onChange={(event) => {
               const newFilters = {
                 ...filters,
-                country: event.target.value ? (event.target.value as CountryType) : undefined
+                country: event.target.value || undefined
               }
               updateFilters(newFilters)
             }}
