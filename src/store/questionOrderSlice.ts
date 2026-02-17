@@ -70,6 +70,8 @@ export const fetchQuestionOrder = createAsyncThunk(
   'questionOrder/fetch',
   async (filters: QuestionFilters, { rejectWithValue }) => {
     try {
+      console.log('🔍 Fetching question order with filters:', filters)
+      
       const response = await fetch('/api/question-order/search', {
         method: 'POST',
         headers: {
@@ -78,13 +80,20 @@ export const fetchQuestionOrder = createAsyncThunk(
         body: JSON.stringify(filters),
       })
       
+      console.log('📡 API Response status:', response.status)
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
       const data: QuestionOrderResponse = await response.json()
+      console.log('✅ Question order data received:', data)
+      console.log('📊 Sections count:', data.sections?.length || 0)
+      console.log('🔍 Filtered sections count:', data.filteredSections?.length || 0)
+      
       return data
     } catch (error: any) {
+      console.error('❌ Failed to fetch question order:', error)
       return rejectWithValue(error.message || 'Failed to fetch question order')
     }
   }
