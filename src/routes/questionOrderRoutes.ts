@@ -94,9 +94,10 @@ export function seedQuestionOrderData(server: any) {
 }
 
 export function registerQuestionOrderRoutes(server: Server) {
-  // GET /api/question-order?reviewType=...&participantType=...&country=...
-  server.get('/question-order', (schema, request) => {
-    const { reviewType, participantType, country } = request.queryParams as Record<string, string>
+  // POST /api/question-order/search - Fetch with filters in request body
+  server.post('/question-order/search', (schema, request) => {
+    const body = request.requestBody ? JSON.parse(request.requestBody) : {}
+    const { reviewType, participantType, country } = body
     
     const hasFilters = Boolean(reviewType || participantType || country)
 

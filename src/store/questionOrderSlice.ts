@@ -70,13 +70,13 @@ export const fetchQuestionOrder = createAsyncThunk(
   'questionOrder/fetch',
   async (filters: QuestionFilters, { rejectWithValue }) => {
     try {
-      // Build query params
-      const params = new URLSearchParams()
-      if (filters.reviewType) params.append('reviewType', filters.reviewType)
-      if (filters.participantType) params.append('participantType', filters.participantType)
-      if (filters.country) params.append('country', filters.country)
-
-      const response = await fetch(`/api/question-order?${params.toString()}`)
+      const response = await fetch('/api/question-order/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filters),
+      })
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -132,7 +132,13 @@ export const resetQuestionOrderData = createAsyncThunk(
       }
 
       // Fetch fresh data after reset
-      const dataResponse = await fetch('/api/question-order')
+      const dataResponse = await fetch('/api/question-order/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      })
       
       if (!dataResponse.ok) {
         throw new Error(`HTTP error! status: ${dataResponse.status}`)
