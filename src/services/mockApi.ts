@@ -235,6 +235,119 @@ export const mockApi = {
     }
   },
 
+  // Get question order data in backend format
+  async getQuestionOrderData(filters: QuestionFilters): Promise<{
+    status: 'SUCCESS' | 'ERROR'
+    filteredSections: any[]
+    sections: any[]
+  }> {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    try {
+      // Build sections array (all sections with all questions)
+      const sections = mockSections.map(section => {
+        // Get all questions for this section
+        const sectionQuestions = mockQuestions.filter(q => q.sectionId === section.id)
+        
+        // Get order for these questions
+        const orderMap = new Map<string, number>()
+        mockOrderData
+          .filter(o => o.sectionId === section.id)
+          .forEach(o => orderMap.set(o.questionId, o.orderIndex))
+        
+        // Sort by order
+        sectionQuestions.sort((a, b) => {
+          const orderA = orderMap.get(a.id) ?? 999
+          const orderB = orderMap.get(b.id) ?? 999
+          return orderA - orderB
+        })
+        
+        // Map to backend format
+        const questions = sectionQuestions.map((q, index) => ({
+          questionSeqNo: index + 1,
+          questionID: q.id,
+          questionText: q.text,
+          reviewType: q.reviewType,
+          participantType: q.participantType,
+          country: q.country,
+          status: q.status
+        }))
+        
+        return {
+          sectionSeqNo: parseInt(section.id),
+          sectionID: parseInt(section.id),
+          sectionName: section.title,
+          questions
+        }
+      })
+      
+      // Build filtered sections array (only if filters are applied)
+      let filteredSections: any[] = []
+      const hasFilters = filters.reviewType || filters.participantType || filters.country
+      
+      if (hasFilters) {
+        filteredSections = mockSections.map(section => {
+          // Get questions for this section
+          let sectionQuestions = mockQuestions.filter(q => q.sectionId === section.id)
+          
+          // Apply filters
+          if (filters.reviewType) {
+            sectionQuestions = sectionQuestions.filter(q => q.reviewType === filters.reviewType)
+          }
+          if (filters.participantType) {
+            sectionQuestions = sectionQuestions.filter(q => q.participantType === filters.participantType)
+          }
+          if (filters.country) {
+            sectionQuestions = sectionQuestions.filter(q => q.country === filters.country)
+          }
+          
+          // Get order for these questions
+          const orderMap = new Map<string, number>()
+          mockOrderData
+            .filter(o => o.sectionId === section.id)
+            .forEach(o => orderMap.set(o.questionId, o.orderIndex))
+          
+          // Sort by order
+          sectionQuestions.sort((a, b) => {
+            const orderA = orderMap.get(a.id) ?? 999
+            const orderB = orderMap.get(b.id) ?? 999
+            return orderA - orderB
+          })
+          
+          // Map to backend format
+          const questions = sectionQuestions.map((q, index) => ({
+            questionSeqNo: index + 1,
+            questionID: q.id,
+            questionText: q.text,
+            reviewType: q.reviewType,
+            participantType: q.participantType,
+            country: q.country,
+            status: q.status
+          }))
+          
+          return {
+            sectionSeqNo: parseInt(section.id),
+            sectionID: parseInt(section.id),
+            sectionName: section.title,
+            questions
+          }
+        }).filter(section => section.questions.length > 0) // Only include sections with matching questions
+      }
+      
+      return {
+        status: 'SUCCESS',
+        filteredSections,
+        sections
+      }
+    } catch (error) {
+      return {
+        status: 'ERROR',
+        filteredSections: [],
+        sections: []
+      }
+    }
+  },
+
   // Save order to API (POST endpoint simulation)
   async saveOrderToApi(data: any): Promise<{ success: boolean, message: string }> {
     await new Promise(resolve => setTimeout(resolve, 300))

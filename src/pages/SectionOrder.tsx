@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Box,
   Button,
@@ -21,40 +21,35 @@ import {
 } from '@mui/material'
 import WarningIcon from '@mui/icons-material/Warning'
 import SaveIcon from '@mui/icons-material/Save'
-import { mockApi, Question, ReviewType, ParticipantType, CountryType, Section, QuestionFilters } from '../services/mockApi'
+import { useQuestionOrder } from '../store/questionOrderHooks'
+import { ReviewType, ParticipantType, CountryType } from '../services/mockApi'
 import { applyFilteredShift } from '../utils/applyFilteredShift'
 
 const reviewTypeOptions: ReviewType[] = ['Due Diligence', 'Periodic Review']
 const participantTypeOptions: ParticipantType[] = ['XY', 'PQR']
 const countryOptions: CountryType[] = ['USA', 'UK', 'India', 'Canada']
 
-const reorderList = (items: string[], sourceId: string, targetId: string): string[] => {
-  const fromIndex = items.indexOf(sourceId)
-  const toIndex = items.indexOf(targetId)
-
-  if (fromIndex === -1 || toIndex === -1) {
-    return items
-  }
-
-  const next = [...items]
-  const [removed] = next.splice(fromIndex, 1)
-  next.splice(toIndex, 0, removed)
-  return next
-}
-
 function SectionOrder() {
-  const [sections, setSections] = useState<Section[]>([])
-  const [filters, setFilters] = useState<QuestionFilters>({})
-  const [sectionData, setSectionData] = useState<
-    { section: Section; orderedQuestions: Question[]; fullOrder: string[]; fullQuestionMap: Record<string, Question> }[]
-  >([])
-  const [originalOrderMap, setOriginalOrderMap] = useState<Record<string, Record<string, number>>>({})
-  const [draggedQuestion, setDraggedQuestion] = useState<{ sectionId: string; questionId: string } | null>(null)
-  const [dragOverQuestion, setDragOverQuestion] = useState<{ sectionId: string; questionId: string } | null>(null)
+  // Redux state and actions
+  const {
+    sections,
+    allSections,
+    filters,
+    isFiltered,
+    loadData,
+    updateFilters,
+    resetData,
+    updateQuestions
+  } = useQuestionOrder()
+
+  // Local UI state
+  const [originalOrderMap, setOriginalOrderMap] = useState<Record<number, Record<string, number>>>({})
+  const [draggedQuestion, setDraggedQuestion] = useState<{ sectionId: number; questionId: string } | null>(null)
+  const [dragOverQuestion, setDragOverQuestion] = useState<{ sectionId: number; questionId: string } | null>(null)
   const [reorderedQuestions, setReorderedQuestions] = useState<Set<string>>(new Set())
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [pendingDrop, setPendingDrop] = useState<{ 
-    sourceSectionId: string
+    sourceSectionId: number
     sourceQuestionId: string
     targetQuestionId: string 
   } | null>(null)
@@ -65,70 +60,33 @@ function SectionOrder() {
     severity: 'success' | 'error' | 'warning' | 'info'
   }>({ open: false, message: '', severity: 'info' })
 
-  const loadAllSections = useCallback(
-    async (nextFilters: QuestionFilters, preserveOriginalOrder = false) => {
-      if (sections.length === 0) {
-        setSectionData([])
-        return
-      }
-
-      const data = await Promise.all(
-        sections.map(async (section) => {
-          // Get all questions for this section from API
-          const allQuestions: Question[] = await mockApi.getQuestionsBySection(section.id)
-          const questionLookup: Record<string, Question> = {}
-          allQuestions.forEach((question: Question) => {
-            questionLookup[question.id] = question
-          })
-
-          // Get filtered questions from API
-          const filteredQuestions = await mockApi.getFilteredQuestions(section.id, nextFilters)
-
-          // Get full order from API
-          const fullOrder = await mockApi.getSectionOrder(section.id)
-
-          // Store original order on first load
-          if (!preserveOriginalOrder && !originalOrderMap[section.id]) {
-            const originalPositions: Record<string, number> = {}
-            fullOrder.forEach((qId, idx) => {
-              originalPositions[qId] = idx + 1
-            })
-            setOriginalOrderMap((prev) => ({ ...prev, [section.id]: originalPositions }))
-          }
-
-          return { section, orderedQuestions: filteredQuestions, fullOrder, fullQuestionMap: questionLookup }
-        })
-      )
-
-      setSectionData(data)
-    },
-    [sections, originalOrderMap]
-  )
-
+  // Load data on mount
   useEffect(() => {
-    const initialize = async () => {
-      const availableSections = await mockApi.getSections()
-      setSections(availableSections)
-    }
+    loadData()
+  }, [loadData])
 
-    initialize()
-  }, [])
-
+  // Store original order on first load
   useEffect(() => {
     if (sections.length > 0) {
-      loadAllSections(filters)
+      sections.forEach((section) => {
+        if (!originalOrderMap[section.sectionID]) {
+          const originalPositions: Record<string, number> = {}
+          section.questions.forEach((q, idx) => {
+            originalPositions[q.questionID] = idx + 1
+          })
+          setOriginalOrderMap((prev) => ({ ...prev, [section.sectionID]: originalPositions }))
+        }
+      })
     }
-  }, [sections, filters, loadAllSections])
+  }, [sections, originalOrderMap])
 
-  const isFiltered = Boolean(filters.reviewType || filters.participantType || filters.country)
-
-  const handleQuestionDragStart = (e: React.DragEvent, sectionId: string, questionId: string) => {
+  const handleQuestionDragStart = (e: React.DragEvent, sectionId: number, questionId: string) => {
     e.stopPropagation()
     setDraggedQuestion({ sectionId, questionId })
     e.dataTransfer.effectAllowed = 'move'
   }
 
-  const handleQuestionDragOver = (e: React.DragEvent, sectionId: string, questionId: string) => {
+  const handleQuestionDragOver = (e: React.DragEvent, sectionId: number, questionId: string) => {
     e.preventDefault()
     e.stopPropagation()
     e.dataTransfer.dropEffect = 'move'
@@ -147,7 +105,7 @@ function SectionOrder() {
     setDragOverQuestion(null)
   }
 
-  const handleQuestionDrop = async (e: React.DragEvent, targetSectionId: string, targetQuestionId: string) => {
+  const handleQuestionDrop = async (e: React.DragEvent, targetSectionId: number, targetQuestionId: string) => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -182,25 +140,42 @@ function SectionOrder() {
   }
 
   const executeReorder = async (
-    sourceSectionId: string,
+    sourceSectionId: number,
     sourceQuestionId: string,
     targetQuestionId: string
   ) => {
-    const fullOrder = await mockApi.getSectionOrder(sourceSectionId)
-    const filteredOrder = await mockApi.getFilteredQuestionIds(sourceSectionId, filters)
+    // Find the section in Redux state
+    const section = allSections.find(s => s.sectionID === sourceSectionId)
+    if (!section) return
 
-    const nextFilteredOrder = reorderList(filteredOrder, sourceQuestionId, targetQuestionId)
+    const fullOrder = section.questions.map(q => q.questionID)
+    const filteredOrder = sections.find(s => s.sectionID === sourceSectionId)?.questions.map(q => q.questionID) || []
+
+    const fromIndex = filteredOrder.indexOf(sourceQuestionId)
+    const toIndex = filteredOrder.indexOf(targetQuestionId)
+    
+    if (fromIndex === -1 || toIndex === -1) return
+
+    const nextFilteredOrder = [...filteredOrder]
+    const [removed] = nextFilteredOrder.splice(fromIndex, 1)
+    nextFilteredOrder.splice(toIndex, 0, removed)
+
     const nextFullOrder = isFiltered
       ? applyFilteredShift(fullOrder, filteredOrder, nextFilteredOrder)
       : nextFilteredOrder
 
-    await mockApi.saveSectionOrder(sourceSectionId, nextFullOrder)
+    // Create updated questions array with new order
+    const updatedQuestions = nextFullOrder.map((qId, idx) => {
+      const originalQ = section.questions.find(q => q.questionID === qId)!
+      return { ...originalQ, questionSeqNo: idx + 1 }
+    })
+
+    // Update Redux state
+    updateQuestions(sourceSectionId, updatedQuestions)
 
     setReorderedQuestions((prev) => new Set(prev).add(sourceQuestionId))
     setDraggedQuestion(null)
     setDragOverQuestion(null)
-
-    await loadAllSections(filters, true)
   }
 
   const handleConfirmReorder = async () => {
@@ -232,8 +207,12 @@ function SectionOrder() {
     setDragOverQuestion(null)
   }
 
-  const handleExport = async () => {
-    const payload = await mockApi.exportData()
+  const handleExport = () => {
+    const payload = {
+      status: 'SUCCESS',
+      filteredSections: isFiltered ? sections : [],
+      sections: allSections
+    }
     console.log('Data export', payload)
     
     const jsonString = JSON.stringify(payload, null, 2)
@@ -251,15 +230,11 @@ function SectionOrder() {
   }
 
   const handleReset = async () => {
-    await mockApi.resetData()
-    const availableSections = await mockApi.getSections()
-    setSections(availableSections)
+    resetData()
     setReorderedQuestions(new Set())
     setOriginalOrderMap({})
     
-    console.log('Data reset complete. Sections:', availableSections.length)
-    const allQuestions = await mockApi.getQuestions()
-    console.log('Total questions loaded:', allQuestions.length)
+    console.log('Data reset complete')
   }
 
   const handleSaveToAPI = async () => {
@@ -268,36 +243,24 @@ function SectionOrder() {
 
       // Build the output with global QuestionOrder
       let globalQuestionOrder = 1
-      const formattedSections = []
-      
-      for (const { section, fullOrder } of sectionData) {
-        const formattedSection = {
-          sectionID: section.id,  // Already numeric format from database
-          questions: fullOrder.map((questionId) => {
+      const formattedData = {
+        sections: allSections.map((section) => ({
+          sectionID: section.sectionID,
+          questions: section.questions.map((question) => {
             const formatted = {
-              questionID: questionId,  // Already in QID format from database
+              questionID: question.questionID,
               QuestionOrder: globalQuestionOrder
             }
             globalQuestionOrder++
             return formatted
           })
-        }
-        
-        formattedSections.push(formattedSection)
-      }
-      
-      const formattedData = {
-        sections: formattedSections
+        }))
       }
 
       console.log('=== POST Data to API ===')
       console.log('Formatted Data Object:', formattedData)
       console.log('POST Body (stringified):', JSON.stringify(formattedData, null, 2))
       console.log('========================')
-
-      // Call mock API (replace with real API endpoint when ready)
-      const result = await mockApi.saveOrderToApi(formattedData)
-      console.log('Save successful:', result)
       
       setSnackbar({
         open: true,
@@ -380,12 +343,13 @@ function SectionOrder() {
             labelId="review-type-select-label"
             label="Review Type"
             value={filters.reviewType ?? ''}
-            onChange={(event) =>
-              setFilters((prev) => ({
-                ...prev,
+            onChange={(event) => {
+              const newFilters = {
+                ...filters,
                 reviewType: event.target.value ? (event.target.value as ReviewType) : undefined
-              }))
-            }
+              }
+              updateFilters(newFilters)
+            }}
           >
             <MenuItem value="">All</MenuItem>
             {reviewTypeOptions.map((option) => (
@@ -402,12 +366,13 @@ function SectionOrder() {
             labelId="participant-type-select-label"
             label="Participant Type"
             value={filters.participantType ?? ''}
-            onChange={(event) =>
-              setFilters((prev) => ({
-                ...prev,
+            onChange={(event) => {
+              const newFilters = {
+                ...filters,
                 participantType: event.target.value ? (event.target.value as ParticipantType) : undefined
-              }))
-            }
+              }
+              updateFilters(newFilters)
+            }}
           >
             <MenuItem value="">All</MenuItem>
             {participantTypeOptions.map((option) => (
@@ -424,12 +389,13 @@ function SectionOrder() {
             labelId="country-select-label"
             label="Country"
             value={filters.country ?? ''}
-            onChange={(event) =>
-              setFilters((prev) => ({
-                ...prev,
+            onChange={(event) => {
+              const newFilters = {
+                ...filters,
                 country: event.target.value ? (event.target.value as CountryType) : undefined
-              }))
-            }
+              }
+              updateFilters(newFilters)
+            }}
           >
             <MenuItem value="">All</MenuItem>
             {countryOptions.map((option) => (
@@ -460,166 +426,168 @@ function SectionOrder() {
       </Stack>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {sectionData.map(({ section, orderedQuestions, fullOrder, fullQuestionMap }) => (
-          <Paper
-            key={section.id}
-            sx={{
-              p: 2,
-              backgroundColor: '#fff',
-              border: '1px solid #ddd',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">{section.title}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-                ({orderedQuestions.length} questions)
-              </Typography>
-            </Box>
+        {sections.map((section) => {
+          // Get full section from allSections
+          const fullSection = allSections.find(s => s.sectionID === section.sectionID)
+          const orderedQuestions = section.questions
+          const fullOrder = fullSection?.questions || []
 
-            {orderedQuestions.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ pl: 4 }}>
-                No questions match the selected filters in this section.
-              </Typography>
-            ) : (
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                  gap: 1.5,
-                  pl: 4
-                }}
-              >
-                {orderedQuestions.map((question, index) => {
-                  const originalPosition = originalOrderMap[section.id]?.[question.id]
-                  const currentPosition = index + 1
-                  const hasOrderChanged = originalPosition && originalPosition !== currentPosition
-
-                  return (
-                    <Card
-                      key={question.id}
-                      draggable
-                      onDragStart={(e) => handleQuestionDragStart(e, section.id, question.id)}
-                      onDragOver={(e) => handleQuestionDragOver(e, section.id, question.id)}
-                      onDragLeave={handleQuestionDragLeave}
-                      onDrop={(e) => handleQuestionDrop(e, section.id, question.id)}
-                      onDragEnd={handleQuestionDragEnd}
-                      sx={{
-                        cursor: 'grab',
-                        backgroundColor:
-                          draggedQuestion?.questionId === question.id
-                            ? '#fff3e0'
-                            : reorderedQuestions.has(question.id)
-                              ? '#e0e0e0'
-                              : '#f5f5f5',
-                        border:
-                          dragOverQuestion?.sectionId === section.id && dragOverQuestion?.questionId === question.id
-                            ? '2px dashed #ff9800'
-                            : reorderedQuestions.has(question.id)
-                              ? '2px solid #757575'
-                              : '1px solid #ddd',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          boxShadow: 2
-                        },
-                        '&:active': {
-                          cursor: 'grabbing'
-                        }
-                      }}
-                    >
-                      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                          <Box
-                            sx={{
-                              minWidth: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              backgroundColor: hasOrderChanged ? '#ff9800' : '#1976d2',
-                              color: '#fff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              flexShrink: 0
-                            }}
-                          >
-                            {currentPosition}
-                          </Box>
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.4, mb: 0.5 }}>
-                              {question.text}
-                            </Typography>
-                            {hasOrderChanged && (
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  display: 'block',
-                                  fontSize: '0.7rem',
-                                  color: '#ff9800',
-                                  fontWeight: 600,
-                                  mb: 0.3
-                                }}
-                              >
-                                Previous: {originalPosition} → New: {currentPosition}
-                              </Typography>
-                            )}
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
-                              {question.reviewType} • {question.participantType} • {question.country}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
+          return (
+            <Paper
+              key={section.sectionID}
+              sx={{
+                p: 2,
+                backgroundColor: '#fff',
+                border: '1px solid #ddd',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">{section.sectionName}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                  ({orderedQuestions.length} questions)
+                </Typography>
               </Box>
-            )}
 
-            {isFiltered && orderedQuestions.length > 0 && (
-              <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #90caf9' }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: '#1976d2', display: 'block', mb: 0.5 }}>
-                  Filtered Order ({orderedQuestions.length} questions):
+              {orderedQuestions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ pl: 4 }}>
+                  No questions match the selected filters in this section.
+                </Typography>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: 1.5,
+                    pl: 4
+                  }}
+                >
+                  {orderedQuestions.map((question, index) => {
+                    const originalPosition = originalOrderMap[section.sectionID]?.[question.questionID]
+                    const currentPosition = index + 1
+                    const hasOrderChanged = originalPosition && originalPosition !== currentPosition
+
+                    return (
+                      <Card
+                        key={question.questionID}
+                        draggable
+                        onDragStart={(e) => handleQuestionDragStart(e, section.sectionID, question.questionID)}
+                        onDragOver={(e) => handleQuestionDragOver(e, section.sectionID, question.questionID)}
+                        onDragLeave={handleQuestionDragLeave}
+                        onDrop={(e) => handleQuestionDrop(e, section.sectionID, question.questionID)}
+                        onDragEnd={handleQuestionDragEnd}
+                        sx={{
+                          cursor: 'grab',
+                          backgroundColor:
+                            draggedQuestion?.questionId === question.questionID
+                              ? '#fff3e0'
+                              : reorderedQuestions.has(question.questionID)
+                                ? '#e0e0e0'
+                                : '#f5f5f5',
+                          border:
+                            dragOverQuestion?.sectionId === section.sectionID && dragOverQuestion?.questionId === question.questionID
+                              ? '2px dashed #ff9800'
+                              : reorderedQuestions.has(question.questionID)
+                                ? '2px solid #757575'
+                                : '1px solid #ddd',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            boxShadow: 2
+                          },
+                          '&:active': {
+                            cursor: 'grabbing'
+                          }
+                        }}
+                      >
+                        <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                            <Box
+                              sx={{
+                                minWidth: 24,
+                                height: 24,
+                                borderRadius: '50%',
+                                backgroundColor: hasOrderChanged ? '#ff9800' : '#1976d2',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                flexShrink: 0
+                              }}
+                            >
+                              {currentPosition}
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.4, mb: 0.5 }}>
+                                {question.questionText}
+                              </Typography>
+                              {hasOrderChanged && (
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    display: 'block',
+                                    fontSize: '0.7rem',
+                                    color: '#ff9800',
+                                    fontWeight: 600,
+                                    mb: 0.3
+                                  }}
+                                >
+                                  Previous: {originalPosition} → New: {currentPosition}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </Box>
+              )}
+
+              {isFiltered && orderedQuestions.length > 0 && (
+                <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #90caf9' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#1976d2', display: 'block', mb: 0.5 }}>
+                    Filtered Order ({orderedQuestions.length} questions):
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#444', lineHeight: 1.6 }}>
+                    {orderedQuestions.map((q, idx) => (
+                      <span key={q.questionID}>
+                        {idx + 1}. {q.questionText}
+                        {idx < orderedQuestions.length - 1 ? ' → ' : ''}
+                      </span>
+                    ))}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#1976d2', display: 'block', mt: 0.5, fontSize: '0.65rem' }}>
+                    This shows only questions matching the current filters.
+                  </Typography>
+                </Box>
+              )}
+
+              <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#f9f9f9', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: '#666', display: 'block', mb: 0.5 }}>
+                  Final Order (All Questions):
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#444', lineHeight: 1.6 }}>
-                  {orderedQuestions.map((q, idx) => (
-                    <span key={q.id}>
-                      {idx + 1}. {q.text}
-                      {idx < orderedQuestions.length - 1 ? ' → ' : ''}
-                    </span>
-                  ))}
+                  {fullOrder.map((q, idx) => {
+                    const isHiddenByFilter = !orderedQuestions.some(oq => oq.questionID === q.questionID)
+                    return (
+                      <span key={q.questionID} style={{ opacity: isHiddenByFilter ? 0.5 : 1, fontStyle: isHiddenByFilter ? 'italic' : 'normal' }}>
+                        {idx + 1}. {q.questionText}
+                        {idx < fullOrder.length - 1 ? ' → ' : ''}
+                      </span>
+                    )
+                  })}
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#1976d2', display: 'block', mt: 0.5, fontSize: '0.65rem' }}>
-                  This shows only questions matching the current filters.
-                </Typography>
+                {isFiltered && (
+                  <Typography variant="caption" sx={{ color: '#999', display: 'block', mt: 0.5, fontSize: '0.65rem' }}>
+                    Note: Grayed out questions are hidden by active filters but still maintain their position in the full order.
+                  </Typography>
+                )}
               </Box>
-            )}
-
-            <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#f9f9f9', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#666', display: 'block', mb: 0.5 }}>
-                Final Order (All Questions):
-              </Typography>
-              <Typography variant="caption" sx={{ color: '#444', lineHeight: 1.6 }}>
-                {fullOrder.map((qId, idx) => {
-                  const q = fullQuestionMap[qId]
-                  if (!q) return null
-                  const isHiddenByFilter = !orderedQuestions.some(oq => oq.id === qId)
-                  return (
-                    <span key={qId} style={{ opacity: isHiddenByFilter ? 0.5 : 1, fontStyle: isHiddenByFilter ? 'italic' : 'normal' }}>
-                      {idx + 1}. {q.text}
-                      {idx < fullOrder.length - 1 ? ' → ' : ''}
-                    </span>
-                  )
-                }).filter(Boolean)}
-              </Typography>
-              {isFiltered && (
-                <Typography variant="caption" sx={{ color: '#999', display: 'block', mt: 0.5, fontSize: '0.65rem' }}>
-                  Note: Grayed out questions are hidden by active filters but still maintain their position in the full order.
-                </Typography>
-              )}
-            </Box>
-          </Paper>
-        ))}
+            </Paper>
+          )
+        })}
       </Box>
 
       <Snackbar
