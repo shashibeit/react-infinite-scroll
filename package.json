@@ -17,7 +17,6 @@
     "@mui/x-data-grid": "^8.23.0",
     "@reduxjs/toolkit": "^2.11.2",
     "dexie": "^4.3.0",
-    "miragejs": "^0.1.48",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-redux": "^9.2.0",
@@ -32,6 +31,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "miragejs": "^0.1.48",
     "typescript": "^5.9.3",
     "vite": "^7.2.4"
   }

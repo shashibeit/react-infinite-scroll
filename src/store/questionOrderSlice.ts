@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import { mockApi, QuestionFilters } from '../services/mockApi'
+import { QuestionFilters } from '../services/mockApi'
 
 // Types matching backend API response
 export interface QuestionOrderItem {
@@ -42,26 +42,50 @@ const initialState: QuestionOrderState = {
   hasChanges: false
 }
 
-// Async thunk to fetch question order data
+// Async thunk to fetch question order data from API
 export const fetchQuestionOrder = createAsyncThunk(
   'questionOrder/fetch',
   async (filters: QuestionFilters, { rejectWithValue }) => {
     try {
-      const response = await mockApi.getQuestionOrderData(filters)
-      return response
+      // Build query params
+      const params = new URLSearchParams()
+      if (filters.reviewType) params.append('reviewType', filters.reviewType)
+      if (filters.participantType) params.append('participantType', filters.participantType)
+      if (filters.country) params.append('country', filters.country)
+
+      const response = await fetch(`/api/question-order?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data: QuestionOrderResponse = await response.json()
+      return data
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to fetch question order')
     }
   }
 )
 
-// Async thunk to save question order
+// Async thunk to save question order to API
 export const saveQuestionOrder = createAsyncThunk(
   'questionOrder/save',
   async (data: { sections: SectionOrderItem[] }, { rejectWithValue }) => {
     try {
-      const response = await mockApi.saveOrderToApi(data)
-      return response
+      const response = await fetch('/api/question-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      return result
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to save question order')
     }
@@ -73,9 +97,26 @@ export const resetQuestionOrderData = createAsyncThunk(
   'questionOrder/reset',
   async (_, { rejectWithValue }) => {
     try {
-      await mockApi.resetData()
-      const response = await mockApi.getQuestionOrderData({})
-      return response
+      const resetResponse = await fetch('/api/question-order/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!resetResponse.ok) {
+        throw new Error(`HTTP error! status: ${resetResponse.status}`)
+      }
+
+      // Fetch fresh data after reset
+      const dataResponse = await fetch('/api/question-order')
+      
+      if (!dataResponse.ok) {
+        throw new Error(`HTTP error! status: ${dataResponse.status}`)
+      }
+      
+      const data: QuestionOrderResponse = await dataResponse.json()
+      return data
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to reset data')
     }
