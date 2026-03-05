@@ -15,10 +15,20 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  CircularProgress
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import FlagIcon from '@mui/icons-material/Flag'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 
 type UserRole = 'DD Manager' | 'SME Analyst' | 'Risk SME View'
 
@@ -42,98 +52,7 @@ interface QuestionApprovalItem {
   comment: string
 }
 
-const mockApprovals: QuestionApprovalItem[] = [
-  {
-    changeRequestId: 'CR-1092',
-    questionId: '123',
-    questionText:
-      'How satisfied are you with the current onboarding process for new team members in your department?',
-    assignedTo: 'Joie Smit',
-    status: 'Pending',
-    requestedBy: 'Ava Jenkins',
-    requestedByRole: 'SME Analyst',
-    attribute: 'Question Text',
-    dateRequested: 'Feb 05, 2026',
-    asIs: 'How satisfied are you with the current onboarding process for new team members in your department?',
-    toBe: 'How satisfied are you with the current onboarding process for new hires in your department?',
-    comment: 'Update wording to align with HR terminology.'
-  },
-  {
-    changeRequestId: 'CR-1095',
-    questionId: '188',
-    questionText:
-      'Please rate the clarity of communication from your immediate supervisor during the last quarter.',
-    assignedTo: 'Joie Smit',
-    status: 'Pending',
-    requestedBy: 'Mason Holt',
-    requestedByRole: 'DD Manager',
-    attribute: 'Question Text',
-    dateRequested: 'Feb 06, 2026',
-    asIs: 'Please rate the clarity of communication from your immediate supervisor during the last quarter.',
-    toBe: 'Please rate the clarity of communication from your direct manager during the last quarter.',
-    comment: 'Use consistent role name across questions.'
-  },
-  {
-    changeRequestId: 'CR-1101',
-    questionId: '205',
-    questionText:
-      'Which training modules were most helpful for improving your day-to-day productivity?',
-    assignedTo: 'John Doe',
-    status: 'Approved',
-    requestedBy: 'Sofia Lin',
-    requestedByRole: 'SME Analyst',
-    attribute: 'Question Text',
-    dateRequested: 'Feb 06, 2026',
-    asIs: 'Which training modules were most helpful for improving your day-to-day productivity?',
-    toBe: 'Which training modules were most helpful for improving your daily productivity?',
-    comment: 'Simplify phrasing for readability.'
-  },
-  {
-    changeRequestId: 'CR-1114',
-    questionId: '256',
-    questionText:
-      'To what extent do you agree that the current tooling supports your team collaboration needs?',
-    assignedTo: 'Joie Smit',
-    status: 'Pending',
-    requestedBy: 'Joie Smit',
-    requestedByRole: 'DD Manager',
-    attribute: 'Question Text',
-    dateRequested: 'Feb 07, 2026',
-    asIs: 'To what extent do you agree that the current tooling supports your team collaboration needs?',
-    toBe: 'To what extent do you agree that the current tooling supports your collaboration needs across teams?',
-    comment: 'Clarify scope to include cross-team work.'
-  },
-  {
-    changeRequestId: 'CR-1120',
-    questionId: '311',
-    questionText:
-      'How frequently do you use the analytics dashboard to make decisions in your role?',
-    assignedTo: 'Sarah Miller',
-    status: 'Rejected',
-    requestedBy: 'Ethan Park',
-    requestedByRole: 'DD Manager',
-    attribute: 'Question Text',
-    dateRequested: 'Feb 07, 2026',
-    asIs: 'How frequently do you use the analytics dashboard to make decisions in your role?',
-    toBe: 'How frequently do you use the analytics dashboard to make data-driven decisions in your role?',
-    comment: 'Emphasize data-driven language.'
-  },
-  {
-    changeRequestId: 'CR-1125',
-    questionId: '342',
-    questionText:
-      'What factors influenced your decision to recommend our services to a colleague?',
-    assignedTo: 'Joie Smit',
-    status: 'Pending',
-    requestedBy: 'Joie Smit',
-    requestedByRole: 'SME Analyst',
-    attribute: 'Question Text',
-    dateRequested: 'Feb 08, 2026',
-    asIs: 'What factors influenced your decision to recommend our services to a colleague?',
-    toBe: 'What factors influenced your decision to recommend our services to others?',
-    comment: 'Broaden the audience scope.'
-  }
-]
+const mockApprovals: QuestionApprovalItem[] = []
 
 const truncateText = (text: string, maxLength: number) => {
   if (text.length <= maxLength) {
@@ -241,9 +160,56 @@ function QuestionApproval() {
   const [approvalComments, setApprovalComments] = useState<Record<string, string>>({})
   const [currentUser, setCurrentUser] = useState('Joie Smit')
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>('DD Manager')
+  
+  // Enhanced approval workflow states
+  const [selectedActions, setSelectedActions] = useState<Record<string, 'approve' | 'reject' | ''>>({})
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [confirmingRequestId, setConfirmingRequestId] = useState<string>('')
+  const [processingRequestId, setProcessingRequestId] = useState<string>('')
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   const handleApprovalCommentChange = (changeRequestId: string, value: string) => {
     setApprovalComments((prev) => ({ ...prev, [changeRequestId]: value }))
+  }
+
+  const handleActionSelection = (changeRequestId: string, action: 'approve' | 'reject' | '') => {
+    setSelectedActions((prev) => ({ ...prev, [changeRequestId]: action }))
+  }
+
+  const isApprovalValid = (changeRequestId: string) => {
+    const hasComment = (approvalComments[changeRequestId] || '').trim().length > 0
+    const hasAction = selectedActions[changeRequestId] !== '' && selectedActions[changeRequestId] !== undefined
+    return hasComment && hasAction
+  }
+
+  const handleApprovalClick = (changeRequestId: string) => {
+    if (!isApprovalValid(changeRequestId)) {
+      return
+    }
+    setConfirmingRequestId(changeRequestId)
+    setConfirmDialogOpen(true)
+  }
+
+  const handleConfirmApproval = async () => {
+    setConfirmDialogOpen(false)
+    setProcessingRequestId(confirmingRequestId)
+    
+    // Simulate 4-second processing delay
+    await new Promise((resolve) => setTimeout(resolve, 4000))
+    
+    const action = selectedActions[confirmingRequestId]
+    const actionText = action === 'approve' ? 'approved' : 'rejected'
+    setSuccessMessage(`✓ Question changes have been ${actionText}`)
+    setSuccessDialogOpen(true)
+    setProcessingRequestId('')
+    
+    // Reset form
+    setTimeout(() => {
+      setSelectedActions((prev) => ({ ...prev, [confirmingRequestId]: '' }))
+      setApprovalComments((prev) => ({ ...prev, [confirmingRequestId]: '' }))
+      setSuccessDialogOpen(false)
+    }, 2000)
   }
 
   const canApprove = (item: QuestionApprovalItem) => {
@@ -366,7 +332,7 @@ function QuestionApproval() {
           const permissionMsg = getPermissionMessage(item)
 
           return (
-            <Accordion key={item.changeRequestId} elevation={1} disableGutters>
+            <Accordion key={item.changeRequestId} elevation={1} disableGutters sx={{ position: 'relative' }}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Stack spacing={0.5} sx={{ width: '100%' }}>
                   <Tooltip title={item.questionText} placement="top-start">
@@ -446,35 +412,70 @@ function QuestionApproval() {
                     </Box>
                     
                     {!canViewOnly() && item.status === 'Pending' && (
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          Approval Comment
-                        </Typography>
-                        <TextField
-                          value={approvalComments[item.changeRequestId] || ''}
-                          onChange={(event) =>
-                            handleApprovalCommentChange(item.changeRequestId, event.target.value)
-                          }
-                          placeholder="Enter approval comment"
-                          multiline
-                          minRows={3}
-                          fullWidth
-                          disabled={!canApprove(item) && !canReject(item) && !canCancel(item)}
-                        />
-                      </Box>
+                      <>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                            Approval Decision
+                          </Typography>
+                          <FormControl component="fieldset">
+                            <RadioGroup
+                              row
+                              value={selectedActions[item.changeRequestId] || ''}
+                              onChange={(e) => handleActionSelection(item.changeRequestId, e.target.value as 'approve' | 'reject' | '')}
+                            >
+                              <FormControlLabel 
+                                value="approve" 
+                                control={<Radio />} 
+                                label="Approve" 
+                                disabled={!canApprove(item)}
+                              />
+                              <FormControlLabel 
+                                value="reject" 
+                                control={<Radio />} 
+                                label="Reject" 
+                                disabled={!canReject(item)}
+                              />
+                            </RadioGroup>
+                          </FormControl>
+                        </Box>
+
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Approval Comment
+                          </Typography>
+                          <TextField
+                            value={approvalComments[item.changeRequestId] || ''}
+                            onChange={(event) =>
+                              handleApprovalCommentChange(item.changeRequestId, event.target.value)
+                            }
+                            placeholder="Enter approval comment (required)"
+                            multiline
+                            minRows={3}
+                            fullWidth
+                            disabled={!canApprove(item) && !canReject(item) && !canCancel(item)}
+                            error={!!(selectedActions[item.changeRequestId] && (approvalComments[item.changeRequestId] || '').trim().length === 0)}
+                            helperText={
+                              selectedActions[item.changeRequestId] && (approvalComments[item.changeRequestId] || '').trim().length === 0
+                                ? 'Approval comment is required'
+                                : ''
+                            }
+                          />
+                        </Box>
+                      </>
                     )}
                   </Stack>
 
                   {item.status === 'Pending' && (
                     <Stack direction="row" spacing={2}>
-                      {canApprove(item) && (
-                        <Button variant="contained" color="success">
-                          Approve
-                        </Button>
-                      )}
-                      {canReject(item) && (
-                        <Button variant="outlined" color="error">
-                          Reject
+                      {(canApprove(item) || canReject(item)) && (
+                        <Button
+                          variant="contained"
+                          color={selectedActions[item.changeRequestId] === 'approve' ? 'success' : 'error'}
+                          disabled={!isApprovalValid(item.changeRequestId)}
+                          onClick={() => handleApprovalClick(item.changeRequestId)}
+                          sx={{ minWidth: 120 }}
+                        >
+                          {selectedActions[item.changeRequestId] === 'approve' ? '✓ Approve' : selectedActions[item.changeRequestId] === 'reject' ? '✗ Reject' : 'Submit Decision'}
                         </Button>
                       )}
                       {canCancel(item) && (
@@ -486,10 +487,518 @@ function QuestionApproval() {
                   )}
                 </Stack>
               </AccordionDetails>
+
+              {/* Processing Loader Overlay */}
+              {processingRequestId === item.changeRequestId && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    zIndex: 1000,
+                    borderRadius: 1
+                  }}
+                >
+                  <Stack alignItems="center" spacing={2}>
+                    <CircularProgress size={60} />
+                    <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 600 }}>
+                      Processing your decision...
+                    </Typography>
+                  </Stack>
+                </Box>
+              )}
             </Accordion>
           )
         })}
       </Stack>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={() => setConfirmDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 600, color: '#22223e' }}>
+          Confirm Your Decision
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mt: 2, mb: 1 }}>
+            Are you sure you want to{' '}
+            <Box
+              component="span"
+              sx={{
+                fontWeight: 700,
+                color: selectedActions[confirmingRequestId] === 'approve' ? '#4caf50' : '#f44336'
+              }}
+            >
+              {selectedActions[confirmingRequestId] === 'approve' ? 'APPROVE' : 'REJECT'}
+            </Box>{' '}
+            this question change?
+          </DialogContentText>
+          {approvalComments[confirmingRequestId] && (
+            <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Your Comment:
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {approvalComments[confirmingRequestId]}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setConfirmDialogOpen(false)} variant="outlined">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmApproval}
+            variant="contained"
+            color={selectedActions[confirmingRequestId] === 'approve' ? 'success' : 'error'}
+            autoFocus
+          >
+            {selectedActions[confirmingRequestId] === 'approve' ? '✓ Confirm Approval' : '✗ Confirm Rejection'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog
+        open={successDialogOpen}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogContent sx={{ pt: 3, textAlign: 'center' }}>
+          <CheckCircleIcon
+            sx={{
+              fontSize: 80,
+              color: '#4caf50',
+              mb: 2
+            }}
+          />
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: '#22223e' }}>
+            Success!
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+            {successMessage}
+          </Typography>
+        </DialogContent>
+      </Dialog>
+
+      {/* Demo Accordions Section */}
+      <Box sx={{ mt: 6, mb: 4 }}>
+        <Divider sx={{ mb: 3 }} />
+        <Typography variant="h5" sx={{ fontWeight: 600, mb: 3, color: '#22223e' }}>
+          📋 Approval Workflow Demo
+        </Typography>
+
+        {/* Accordion 1: With Approve/Reject Buttons */}
+        <Accordion elevation={1} disableGutters sx={{ mb: 2, backgroundColor: '#f5f7ff', position: 'relative' }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: '#e3f2fd' }}>
+            <Stack spacing={0.5} sx={{ width: '100%' }}>
+              <Chip 
+                label="With Approve/Reject Workflow" 
+                color="primary" 
+                size="small" 
+                sx={{ width: 'fit-content', mb: 0.5 }}
+              />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Question ID 450 - Clarify the role of project managers in cross-functional...
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Assigned to: Joie Smit
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={3} alignItems="flex-start" flexWrap="wrap">
+                <Stack spacing={0.5}>
+                  <Typography variant="caption" color="text.secondary">
+                    State
+                  </Typography>
+                  <Chip
+                    icon={<FlagIcon fontSize="small" />}
+                    label="Pending"
+                    size="small"
+                    color="warning"
+                    sx={{ width: 'fit-content' }}
+                  />
+                </Stack>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Change Request ID: CR-1200
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Question ID: 450
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Requested By: Mason Holt (DD Manager)
+                  </Typography>
+                </Box>
+              </Stack>
+              <Divider />
+              <Stack spacing={1}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    As Is Question Text
+                  </Typography>
+                  <Typography variant="body2">What role do project managers play in cross-functional initiatives?</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    To Be Question Text
+                  </Typography>
+                  <Typography variant="body2" component="div">
+                    What role do <Box component="span" sx={{ color: '#1e40af', fontWeight: 700 }}>senior</Box> project managers play in cross-functional initiatives?
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Comment
+                  </Typography>
+                  <Typography variant="body2">Add 'senior' to specify the level of project manager we're asking about.</Typography>
+                </Box>
+
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Approval Decision
+                  </Typography>
+                  <FormControl component="fieldset">
+                    <RadioGroup
+                      row
+                      value={selectedActions['CR-1200'] || ''}
+                      onChange={(e) => setSelectedActions((prev) => ({ ...prev, ['CR-1200']: e.target.value as 'approve' | 'reject' | '' }))}
+                    >
+                      <FormControlLabel 
+                        value="approve" 
+                        control={<Radio />} 
+                        label="Approve" 
+                      />
+                      <FormControlLabel 
+                        value="reject" 
+                        control={<Radio />} 
+                        label="Reject" 
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                </Box>
+
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Approval Comment
+                  </Typography>
+                  <TextField
+                    value={approvalComments['CR-1200'] || ''}
+                    onChange={(e) => setApprovalComments((prev) => ({ ...prev, ['CR-1200']: e.target.value }))}
+                    placeholder="Enter approval comment (required)"
+                    multiline
+                    minRows={3}
+                    fullWidth
+                    error={!!(selectedActions['CR-1200'] && (approvalComments['CR-1200'] || '').trim().length === 0)}
+                    helperText={
+                      selectedActions['CR-1200'] && (approvalComments['CR-1200'] || '').trim().length === 0
+                        ? 'Approval comment is required'
+                        : ''
+                    }
+                  />
+                </Box>
+              </Stack>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained"
+                  color={selectedActions['CR-1200'] === 'approve' ? 'success' : 'error'}
+                  disabled={!isApprovalValid('CR-1200')}
+                  onClick={() => handleApprovalClick('CR-1200')}
+                  sx={{ minWidth: 120 }}
+                >
+                  {selectedActions['CR-1200'] === 'approve' ? '✓ Approve' : selectedActions['CR-1200'] === 'reject' ? '✗ Reject' : 'Submit Decision'}
+                </Button>
+              </Stack>
+            </Stack>
+          </AccordionDetails>
+
+          {/* Processing Loader Overlay */}
+          {processingRequestId === 'CR-1200' && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                zIndex: 1000,
+                borderRadius: 1
+              }}
+            >
+              <Stack alignItems="center" spacing={2}>
+                <CircularProgress size={60} />
+                <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 600 }}>
+                  Processing your decision...
+                </Typography>
+              </Stack>
+            </Box>
+          )}
+        </Accordion>
+
+        {/* Accordion 2: With Cancel Changes Button */}
+        <Accordion elevation={1} disableGutters sx={{ mb: 2, backgroundColor: '#fef5ff', position: 'relative' }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: '#ffe0f0' }}>
+            <Stack spacing={0.5} sx={{ width: '100%' }}>
+              <Chip 
+                label="With Cancel Request Option" 
+                color="warning" 
+                size="small" 
+                sx={{ width: 'fit-content', mb: 0.5 }}
+              />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Question ID 678 - Rephrase compliance documentation question...
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Assigned to: Sofia Lin
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={3} alignItems="flex-start" flexWrap="wrap">
+                <Stack spacing={0.5}>
+                  <Typography variant="caption" color="text.secondary">
+                    State
+                  </Typography>
+                  <Chip
+                    icon={<FlagIcon fontSize="small" />}
+                    label="Pending"
+                    size="small"
+                    color="warning"
+                    sx={{ width: 'fit-content' }}
+                  />
+                </Stack>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Change Request ID: CR-1189
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Question ID: 678
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Requested By: Ava Jenkins (SME Analyst)
+                  </Typography>
+                </Box>
+              </Stack>
+              <Divider />
+              <Stack spacing={1}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    As Is Question Text
+                  </Typography>
+                  <Typography variant="body2">How well are your compliance processes documented and accessible?</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    To Be Question Text
+                  </Typography>
+                  <Typography variant="body2" component="div">
+                    How <Box component="span" sx={{ color: '#1e40af', fontWeight: 700 }}>thoroughly</Box> are your compliance processes documented and <Box component="span" sx={{ textDecoration: 'line-through', textDecorationStyle: 'dashed', color: 'text.secondary' }}>accessible</Box> <Box component="span" sx={{ color: '#1e40af', fontWeight: 700 }}>available</Box>?
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Comment
+                  </Typography>
+                  <Typography variant="body2">Updated wording for better clarity in internal documentation reviews.</Typography>
+                </Box>
+
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Approval Decision
+                  </Typography>
+                  <FormControl component="fieldset">
+                    <RadioGroup
+                      row
+                      value={selectedActions['CR-1189'] || ''}
+                      onChange={(e) => setSelectedActions((prev) => ({ ...prev, ['CR-1189']: e.target.value as 'approve' | 'reject' | '' }))}
+                    >
+                      <FormControlLabel 
+                        value="approve" 
+                        control={<Radio />} 
+                        label="Approve" 
+                      />
+                      <FormControlLabel 
+                        value="reject" 
+                        control={<Radio />} 
+                        label="Reject" 
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                </Box>
+
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Approval Comment
+                  </Typography>
+                  <TextField
+                    value={approvalComments['CR-1189'] || ''}
+                    onChange={(e) => setApprovalComments((prev) => ({ ...prev, ['CR-1189']: e.target.value }))}
+                    placeholder="Enter approval comment (required)"
+                    multiline
+                    minRows={3}
+                    fullWidth
+                    error={!!(selectedActions['CR-1189'] && (approvalComments['CR-1189'] || '').trim().length === 0)}
+                    helperText={
+                      selectedActions['CR-1189'] && (approvalComments['CR-1189'] || '').trim().length === 0
+                        ? 'Approval comment is required'
+                        : ''
+                    }
+                  />
+                </Box>
+              </Stack>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained"
+                  color={selectedActions['CR-1189'] === 'approve' ? 'success' : 'error'}
+                  disabled={!isApprovalValid('CR-1189')}
+                  onClick={() => handleApprovalClick('CR-1189')}
+                  sx={{ minWidth: 120 }}
+                >
+                  {selectedActions['CR-1189'] === 'approve' ? '✓ Approve' : selectedActions['CR-1189'] === 'reject' ? '✗ Reject' : 'Submit Decision'}
+                </Button>
+              </Stack>
+            </Stack>
+          </AccordionDetails>
+
+          {/* Processing Loader Overlay */}
+          {processingRequestId === 'CR-1189' && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                zIndex: 1000,
+                borderRadius: 1
+              }}
+            >
+              <Stack alignItems="center" spacing={2}>
+                <CircularProgress size={60} />
+                <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 600 }}>
+                  Processing your decision...
+                </Typography>
+              </Stack>
+            </Box>
+          )}
+        </Accordion>
+
+        {/* Accordion 3: Read-Only Mode (No Buttons) */}
+        <Accordion elevation={1} disableGutters sx={{ mb: 2, backgroundColor: '#f0f4f8' }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ backgroundColor: '#e2e8f0' }}>
+            <Stack spacing={0.5} sx={{ width: '100%' }}>
+              <Chip 
+                label="Read-Only Mode (Approved)" 
+                color="default" 
+                size="small" 
+                sx={{ width: 'fit-content', mb: 0.5 }}
+              />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Question ID 892 - Add participant role classification...
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Assigned to: John Doe
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Stack spacing={2}>
+              <Alert severity="info" sx={{ mb: 1 }}>
+                👁️ This approval is already completed. Viewing in read-only mode.
+              </Alert>
+              <Stack direction="row" spacing={3} alignItems="flex-start" flexWrap="wrap">
+                <Stack spacing={0.5}>
+                  <Typography variant="caption" color="text.secondary">
+                    State
+                  </Typography>
+                  <Chip
+                    icon={<FlagIcon fontSize="small" />}
+                    label="Approved"
+                    size="small"
+                    color="success"
+                    sx={{ width: 'fit-content' }}
+                  />
+                </Stack>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Change Request ID: CR-1165
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Question ID: 892
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Requested By: Ethan Park (DD Manager)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Approved By: Sarah Miller (DD Manager)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span">
+                    Date Approved: Feb 15, 2026
+                  </Typography>
+                </Box>
+              </Stack>
+              <Divider />
+              <Stack spacing={1}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    As Is Question Text
+                  </Typography>
+                  <Typography variant="body2">What is your role in the organization?</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    To Be Question Text
+                  </Typography>
+                  <Typography variant="body2" component="div">
+                    What is your <Box component="span" sx={{ color: '#1e40af', fontWeight: 700 }}>current role and classification</Box> in the organization?
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Comment
+                  </Typography>
+                  <Typography variant="body2">Add role classification to better segment respondents for analysis.</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Approval Decision
+                  </Typography>
+                  <Chip label="✓ Approved" color="success" size="small" sx={{ width: 'fit-content' }} />
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Approval Comment
+                  </Typography>
+                  <Typography variant="body2" sx={{ p: 1.5, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+                    ✓ Clear and meaningful improvement to question scope. This will provide better insights into different organizational perspectives.
+                  </Typography>
+                </Box>
+              </Stack>
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+      </Box>
     </Box>
   )
 }

@@ -99,7 +99,7 @@ export function registerQuestionOrderRoutes(server: Server) {
     const body = request.requestBody ? JSON.parse(request.requestBody) : {}
     const { reviewType, participantType, country } = body
     
-    const hasFilters = Boolean(reviewType || participantType || country)
+    const hasFilters = (reviewType && reviewType.length > 0) || (participantType && participantType.length > 0) || (country && country.length > 0)
 
     // Get all questions grouped by section
     const allQuestions = schema.all('question').models
@@ -150,9 +150,9 @@ export function registerQuestionOrderRoutes(server: Server) {
             const filteredQuestions = (sectionMap[sectionId] || [])
               .filter(q => {
                 const question = q as any
-                if (reviewType && question.reviewType !== reviewType) return false
-                if (participantType && question.participantType !== participantType) return false
-                if (country && question.country !== country) return false
+                if (reviewType && reviewType.length > 0 && !reviewType.includes(question.reviewType)) return false
+                if (participantType && participantType.length > 0 && !participantType.includes(question.participantType)) return false
+                if (country && country.length > 0 && !country.includes(question.country)) return false
                 return true
               })
               .sort((a, b) => Number((a as any).order) - Number((b as any).order))

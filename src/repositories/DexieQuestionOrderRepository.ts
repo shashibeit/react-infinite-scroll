@@ -50,13 +50,13 @@ export class DexieQuestionOrderRepository implements QuestionOrderRepository {
 
   private applyFilters(questions: Question[], filters: QuestionFilters): Question[] {
     return questions.filter((question) => {
-      if (filters.reviewType && question.reviewType !== filters.reviewType) {
+      if (filters.reviewType && filters.reviewType.length > 0 && !filters.reviewType.includes(question.reviewType)) {
         return false
       }
-      if (filters.participantType && question.participantType !== filters.participantType) {
+      if (filters.participantType && filters.participantType.length > 0 && !filters.participantType.includes(question.participantType)) {
         return false
       }
-      if (filters.country && question.country !== filters.country) {
+      if (filters.country && filters.country.length > 0 && !filters.country.includes(question.country)) {
         return false
       }
       return true

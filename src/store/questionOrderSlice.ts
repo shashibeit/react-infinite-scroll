@@ -6,9 +6,9 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 // Filter parameters sent to GET /api/question-order
 // Note: Values come from dynamic dropdowns, not predefined sets
 export interface QuestionFilters {
-  reviewType?: string
-  participantType?: string
-  country?: string
+  reviewType?: string[]
+  participantType?: string[]
+  country?: string[]
 }
 
 // Question item in API response
@@ -65,19 +65,38 @@ const initialState: QuestionOrderState = {
   hasChanges: false
 }
 
+// Mapping for key values to actual API values
+const keyValueMap: Record<string, string> = {
+  'DD': 'Due Diligence',
+  'PR': 'Periodic Review',
+  'IND': 'India',
+  'CAN': 'Canada'
+}
+
+// Helper function to map filter key values to actual values for API
+const mapFiltersToApiValues = (filters: QuestionFilters): QuestionFilters => {
+  return {
+    reviewType: filters.reviewType?.map(v => keyValueMap[v] || v),
+    participantType: filters.participantType?.map(v => keyValueMap[v] || v),
+    country: filters.country?.map(v => keyValueMap[v] || v)
+  }
+}
+
 // Async thunk to fetch question order data from API
 export const fetchQuestionOrder = createAsyncThunk(
   'questionOrder/fetch',
   async (filters: QuestionFilters, { rejectWithValue }) => {
     try {
-      console.log('🔍 Fetching question order with filters:', filters)
+      // Map key values to actual API values
+      const apiFilters = mapFiltersToApiValues(filters)
+      console.log('🔍 Fetching question order with filters:', apiFilters)
       
       const response = await fetch('/api/question-order/search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(filters),
+        body: JSON.stringify(apiFilters),
       })
       
       console.log('📡 API Response status:', response.status)
@@ -193,9 +212,9 @@ const questionOrderSlice = createSlice({
           if (filteredIndex !== -1) {
             // Only update questions that match current filters
             const filteredQuestions = questions.filter(q => {
-              if (state.filters.reviewType && q.reviewType !== state.filters.reviewType) return false
-              if (state.filters.participantType && q.participantType !== state.filters.participantType) return false
-              if (state.filters.country && q.country !== state.filters.country) return false
+              if (state.filters.reviewType && state.filters.reviewType.length > 0 && !state.filters.reviewType.includes(q.reviewType || '')) return false
+              if (state.filters.participantType && state.filters.participantType.length > 0 && !state.filters.participantType.includes(q.participantType || '')) return false
+              if (state.filters.country && state.filters.country.length > 0 && !state.filters.country.includes(q.country || '')) return false
               return true
             })
             state.data.filteredSections[filteredIndex].questions = filteredQuestions

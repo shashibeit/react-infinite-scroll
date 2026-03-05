@@ -29,7 +29,7 @@ interface Participant {
 interface Review {
   id: string
   reviewType: string
-  status: 'In Progress' | 'Completed' | 'Not Started'
+  status: 'In Progress' | 'Completed' | 'Not Started' | 'Send Questionnaire'
   startDate: string
   assignedTo: string
   completionPercentage: number
@@ -85,7 +85,7 @@ const mockReviewData: Record<string, Review[]> = {
     {
       id: 'R001',
       reviewType: 'Due Diligence',
-      status: 'In Progress',
+      status: 'Send Questionnaire',
       startDate: '2026-01-15',
       assignedTo: 'John Smith',
       completionPercentage: 65
@@ -111,7 +111,7 @@ const mockReviewData: Record<string, Review[]> = {
     {
       id: 'R004',
       reviewType: 'Due Diligence',
-      status: 'In Progress',
+      status: 'Send Questionnaire',
       startDate: '2026-02-10',
       assignedTo: 'Sarah Williams',
       completionPercentage: 45
@@ -168,6 +168,10 @@ function ParticipantDetails() {
 
   const handleAccordionChange = (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpanded(isExpanded ? panel : false)
+  }
+
+  const handleSendQuestionnaire = (reviewId: string) => {
+    navigate(`/questionnaire-preview/${reviewId}`)
   }
 
   if (!participant) {
@@ -344,6 +348,18 @@ function ParticipantDetails() {
                         </Typography>
                         <Typography variant="body2">{review.completionPercentage}%</Typography>
                       </Box>
+                      {review.status === 'Send Questionnaire' && (
+                        <Box sx={{ mt: 2 }}>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            fullWidth
+                            onClick={() => handleSendQuestionnaire(review.id)}
+                          >
+                            Send Questionnaire
+                          </Button>
+                        </Box>
+                      )}
                     </Stack>
                   </AccordionDetails>
                 </Accordion>

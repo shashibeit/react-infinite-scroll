@@ -11,6 +11,8 @@ import CreateQuestion from './pages/CreateQuestion'
 import QuestionOrder from './pages/QuestionOrder'
 import SectionOrder from './pages/SectionOrder'
 import QuestionApproval from './pages/QuestionApproval'
+import QuestionnairePreview from './pages/QuestionnairePreview'
+import DocumentPreview from './pages/DocumentPreview'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { restoreAuth, type UserRole } from './store/authSlice'
 import './App.css'
@@ -64,6 +66,18 @@ function App() {
         <Route path="/participants/:id" element={
           <ProtectedRoute>
             <ParticipantDetails />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/questionnaire-preview/:reviewId" element={
+          <ProtectedRoute>
+            <QuestionnairePreview />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/document-preview/:reviewId" element={
+          <ProtectedRoute>
+            <DocumentPreview />
           </ProtectedRoute>
         } />
         

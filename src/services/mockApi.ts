@@ -29,9 +29,9 @@ export interface SectionQuestionOrder {
 }
 
 export interface QuestionFilters {
-  reviewType?: ReviewType
-  participantType?: ParticipantType
-  country?: CountryType
+  reviewType?: ReviewType[]
+  participantType?: ParticipantType[]
+  country?: CountryType[]
 }
 
 // Mock data storage (in-memory)
@@ -188,14 +188,14 @@ export const mockApi = {
     
     let questions = mockQuestions.filter(q => q.sectionId === sectionId)
     
-    if (filters.reviewType) {
-      questions = questions.filter(q => q.reviewType === filters.reviewType)
+    if (filters.reviewType && filters.reviewType.length > 0) {
+      questions = questions.filter(q => filters.reviewType!.includes(q.reviewType))
     }
-    if (filters.participantType) {
-      questions = questions.filter(q => q.participantType === filters.participantType)
+    if (filters.participantType && filters.participantType.length > 0) {
+      questions = questions.filter(q => filters.participantType!.includes(q.participantType))
     }
-    if (filters.country) {
-      questions = questions.filter(q => q.country === filters.country)
+    if (filters.country && filters.country.length > 0) {
+      questions = questions.filter(q => filters.country!.includes(q.country))
     }
     
     // Sort by order
@@ -283,7 +283,7 @@ export const mockApi = {
       
       // Build filtered sections array (only if filters are applied)
       let filteredSections: any[] = []
-      const hasFilters = filters.reviewType || filters.participantType || filters.country
+      const hasFilters = (filters.reviewType && filters.reviewType.length > 0) || (filters.participantType && filters.participantType.length > 0) || (filters.country && filters.country.length > 0)
       
       if (hasFilters) {
         filteredSections = mockSections.map(section => {
@@ -291,14 +291,14 @@ export const mockApi = {
           let sectionQuestions = mockQuestions.filter(q => q.sectionId === section.id)
           
           // Apply filters
-          if (filters.reviewType) {
-            sectionQuestions = sectionQuestions.filter(q => q.reviewType === filters.reviewType)
+          if (filters.reviewType && filters.reviewType.length > 0) {
+            sectionQuestions = sectionQuestions.filter(q => filters.reviewType!.includes(q.reviewType))
           }
-          if (filters.participantType) {
-            sectionQuestions = sectionQuestions.filter(q => q.participantType === filters.participantType)
+          if (filters.participantType && filters.participantType.length > 0) {
+            sectionQuestions = sectionQuestions.filter(q => filters.participantType!.includes(q.participantType))
           }
-          if (filters.country) {
-            sectionQuestions = sectionQuestions.filter(q => q.country === filters.country)
+          if (filters.country && filters.country.length > 0) {
+            sectionQuestions = sectionQuestions.filter(q => filters.country!.includes(q.country))
           }
           
           // Get order for these questions
