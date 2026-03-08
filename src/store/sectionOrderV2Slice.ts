@@ -183,6 +183,8 @@ const sectionOrderV2Slice = createSlice({
       .addCase(fetchSectionOrderData.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload as string
+        state.sections = []
+        state.fullOrderSections = []
       })
 
     // Submit section order data
