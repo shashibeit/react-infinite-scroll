@@ -10,9 +10,11 @@ import QuestionBankList from './pages/QuestionBankList'
 import CreateQuestion from './pages/CreateQuestion'
 import QuestionOrder from './pages/QuestionOrder'
 import SectionOrder from './pages/SectionOrder'
+import SectionOrderV2 from './pages/SectionOrderV2'
 import QuestionApproval from './pages/QuestionApproval'
 import QuestionnairePreview from './pages/QuestionnairePreview'
 import DocumentPreview from './pages/DocumentPreview'
+import DemoDocument from './pages/DemoDocument'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { restoreAuth, type UserRole } from './store/authSlice'
 import './App.css'
@@ -81,6 +83,12 @@ function App() {
           </ProtectedRoute>
         } />
         
+        <Route path="/demo-document" element={
+          <ProtectedRoute>
+            <DemoDocument />
+          </ProtectedRoute>
+        } />
+        
         <Route path="/question-bank" element={
           <ProtectedRoute>
             <QuestionBank />
@@ -89,6 +97,7 @@ function App() {
           <Route path="list" element={<QuestionBankList />} />
           <Route path="ordering" element={<QuestionOrder />} />
           <Route path="section-order" element={<SectionOrder />} />
+          <Route path="section-order-v2" element={<SectionOrderV2 />} />
           <Route path="approval" element={<QuestionApproval />} />
           <Route path="create" element={<CreateQuestion />} />
         </Route>

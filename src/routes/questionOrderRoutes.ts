@@ -219,7 +219,7 @@ export function registerQuestionOrderRoutes(server: Server) {
     schema.all('section').models.forEach(s => s.destroy())
 
     // Re-seed using the shared seed function
-    seedQuestionOrderData((server as any).schema)
+    seedQuestionOrderData(schema)
 
     return new Response(
       200,

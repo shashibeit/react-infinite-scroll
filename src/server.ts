@@ -1,10 +1,7 @@
 import { createServer, Response } from 'miragejs'
 import { 
-  registerQuestionOrderRoutes, 
-  seedQuestionOrderData,
-  questionOrderModels,
-  questionOrderFactories
-} from './routes/questionOrderRoutes'
+  registerQuestionOrderRoutes,
+} from './routes/questionOrderRoutesNew'
 
 interface ServerConfig {
   environment?: string
@@ -14,19 +11,11 @@ export function makeServer({ environment = 'development' }: ServerConfig = {}) {
   const server = createServer({
     environment,
 
-    models: questionOrderModels,
-
-    factories: questionOrderFactories,
-
-    seeds(server) {
-      seedQuestionOrderData(server)
-    },
-
     routes() {
       this.namespace = 'api'
       this.timing = 500 // Simulate network delay
 
-      // Register Question Order Routes
+      // Register Question Order Routes (JSON-based)
       registerQuestionOrderRoutes(this)
 
       // ========== Existing Routes ==========

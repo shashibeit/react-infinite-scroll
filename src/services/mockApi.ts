@@ -89,7 +89,8 @@ function initializeMockData() {
   let globalQuestionCounter = 1
 
   sections.forEach((section) => {
-    const questionCount = Math.floor(Math.random() * 6) + 5 // 5-10 questions
+    // First section gets exactly 13 questions, others get 5-10
+    const questionCount = section.id === '1' ? 13 : Math.floor(Math.random() * 6) + 5
     const sectionQuestions: Question[] = []
 
     for (let i = 0; i < questionCount; i++) {

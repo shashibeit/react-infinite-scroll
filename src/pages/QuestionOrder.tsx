@@ -58,23 +58,25 @@ function QuestionOrder() {
 
   // Load data on mount
   useEffect(() => {
+    console.log('📄 [COMPONENT] QuestionOrder mounted - loading data')
+    setOriginalOrderMap({}) // Reset map to ensure fresh data rebuilds it
     loadData()
   }, [loadData])
 
-  // Store original order on first load
+  // Store original order when data loads - rebuilds from fresh data
   useEffect(() => {
     if (sections.length > 0) {
+      const newMap: Record<number, Record<string, number>> = {}
       sections.forEach((section) => {
-        if (!originalOrderMap[section.sectionID]) {
-          const originalPositions: Record<string, number> = {}
-          section.questions.forEach((q, idx) => {
-            originalPositions[q.questionID] = idx + 1
-          })
-          setOriginalOrderMap((prev) => ({ ...prev, [section.sectionID]: originalPositions }))
-        }
+        const originalPositions: Record<string, number> = {}
+        section.questions.forEach((q, idx) => {
+          originalPositions[q.questionID] = idx + 1
+        })
+        newMap[section.sectionID] = originalPositions
       })
+      setOriginalOrderMap(newMap)
     }
-  }, [sections, originalOrderMap])
+  }, [sections])
 
   const handleQuestionDragStart = (e: React.DragEvent, sectionId: number, questionId: string) => {
     e.stopPropagation()
@@ -332,11 +334,11 @@ function QuestionOrder() {
           <Select
             labelId="review-type-select-label"
             label="Review Type"
-            value={filters.reviewType ?? ''}
+            value={filters.reviewType?.[0] ?? ''}
             onChange={(event) => {
               const newFilters = {
                 ...filters,
-                reviewType: event.target.value || undefined
+                reviewType: event.target.value ? [event.target.value] : undefined
               }
               updateFilters(newFilters)
             }}
@@ -355,11 +357,11 @@ function QuestionOrder() {
           <Select
             labelId="participant-type-select-label"
             label="Participant Type"
-            value={filters.participantType ?? ''}
+            value={filters.participantType?.[0] ?? ''}
             onChange={(event) => {
               const newFilters = {
                 ...filters,
-                participantType: event.target.value || undefined
+                participantType: event.target.value ? [event.target.value] : undefined
               }
               updateFilters(newFilters)
             }}
@@ -378,11 +380,11 @@ function QuestionOrder() {
           <Select
             labelId="country-select-label"
             label="Country"
-            value={filters.country ?? ''}
+            value={filters.country?.[0] ?? ''}
             onChange={(event) => {
               const newFilters = {
                 ...filters,
-                country: event.target.value || undefined
+                country: event.target.value ? [event.target.value] : undefined
               }
               updateFilters(newFilters)
             }}

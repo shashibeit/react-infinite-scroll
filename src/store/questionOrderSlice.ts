@@ -6,9 +6,9 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 // Filter parameters sent to GET /api/question-order
 // Note: Values come from dynamic dropdowns, not predefined sets
 export interface QuestionFilters {
-  reviewType?: string[]
-  participantType?: string[]
-  country?: string[]
+  reviewType?: string
+  participantType?: string
+  country?: string
 }
 
 // Question item in API response
@@ -76,9 +76,9 @@ const keyValueMap: Record<string, string> = {
 // Helper function to map filter key values to actual values for API
 const mapFiltersToApiValues = (filters: QuestionFilters): QuestionFilters => {
   return {
-    reviewType: filters.reviewType?.map(v => keyValueMap[v] || v),
-    participantType: filters.participantType?.map(v => keyValueMap[v] || v),
-    country: filters.country?.map(v => keyValueMap[v] || v)
+    reviewType: filters.reviewType ? (keyValueMap[filters.reviewType] || filters.reviewType) : undefined,
+    participantType: filters.participantType ? (keyValueMap[filters.participantType] || filters.participantType) : undefined,
+    country: filters.country ? (keyValueMap[filters.country] || filters.country) : undefined
   }
 }
 
@@ -212,9 +212,9 @@ const questionOrderSlice = createSlice({
           if (filteredIndex !== -1) {
             // Only update questions that match current filters
             const filteredQuestions = questions.filter(q => {
-              if (state.filters.reviewType && state.filters.reviewType.length > 0 && !state.filters.reviewType.includes(q.reviewType || '')) return false
-              if (state.filters.participantType && state.filters.participantType.length > 0 && !state.filters.participantType.includes(q.participantType || '')) return false
-              if (state.filters.country && state.filters.country.length > 0 && !state.filters.country.includes(q.country || '')) return false
+              if (state.filters.reviewType && q.reviewType !== state.filters.reviewType) return false
+              if (state.filters.participantType && q.participantType !== state.filters.participantType) return false
+              if (state.filters.country && q.country !== state.filters.country) return false
               return true
             })
             state.data.filteredSections[filteredIndex].questions = filteredQuestions

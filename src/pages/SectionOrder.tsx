@@ -17,20 +17,10 @@ import {
   DialogContentText,
   DialogActions,
   Snackbar,
-  Alert,
-  Chip,
-  TextField,
-  Tooltip,
-  Grid
+  Alert
 } from '@mui/material'
 import WarningIcon from '@mui/icons-material/Warning'
 import SaveIcon from '@mui/icons-material/Save'
-import SearchIcon from '@mui/icons-material/Search'
-import CloseIcon from '@mui/icons-material/Close'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
-import FolderOpenIcon from '@mui/icons-material/FolderOpen'
-import LocalOfferIcon from '@mui/icons-material/LocalOffer'
 import { useQuestionOrder } from '../store/questionOrderHooks'
 import { applyFilteredShift } from '../utils/applyFilteredShift'
 
@@ -80,18 +70,11 @@ function SectionOrder() {
     message: string
     severity: 'success' | 'error' | 'warning' | 'info'
   }>({ open: false, message: '', severity: 'info' })
-  const [searchTerm, setSearchTerm] = useState('')
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set(sections.map(s => s.sectionID)))
 
   // Load data on mount
   useEffect(() => {
     loadData()
   }, [loadData])
-
-  // Update expanded sections when sections change
-  useEffect(() => {
-    setExpandedSections(new Set(sections.map(s => s.sectionID)))
-  }, [sections.length])
 
   // Store original order on first load
   useEffect(() => {
@@ -311,82 +294,11 @@ function SectionOrder() {
     setSnackbar(prev => ({ ...prev, open: false }))
   }
 
-  // Toggle section expansion
-  const toggleSectionExpand = (sectionId: number) => {
-    setExpandedSections(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(sectionId)) {
-        newSet.delete(sectionId)
-      } else {
-        newSet.add(sectionId)
-      }
-      return newSet
-    })
-  }
-
-  // Count active filters
-  const activeFiltersCount = (
-    (filters.reviewType?.length || 0) +
-    (filters.participantType?.length || 0) +
-    (filters.country?.length || 0)
-  )
-
-  // Filter questions by search term
-  const filterQuestionsBySearch = (questions: any[]) => {
-    if (!searchTerm) return questions
-    return questions.filter(q => 
-      q.questionText.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }
-
-  // Get metadata for question
-  const getQuestionMetadata = (question: any) => {
-    return [
-      { label: question.reviewType, color: 'primary', icon: '📋' },
-      { label: question.participantType, color: 'secondary', icon: '👤' },
-      { label: question.country, color: 'success', icon: '🌍' }
-    ]
-  }
-
   return (
     <Box sx={{ width: '100%', padding: 3 }}>
       <Typography variant="h4" sx={{ mb: 2 }}>
         Section Order Manager
       </Typography>
-
-      {/* Statistics Card */}
-      <Paper sx={{ p: 2, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={3}>
-            <Box sx={{ textAlign: 'center' }}>
-              <FolderOpenIcon sx={{ fontSize: 32, mb: 1 }} />
-              <Typography variant="h6">{sections.length}</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>Sections</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <Box sx={{ textAlign: 'center' }}>
-              <LocalOfferIcon sx={{ fontSize: 32, mb: 1 }} />
-              <Typography variant="h6">{sections.reduce((sum, s) => sum + s.questions.length, 0)}</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>Questions</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <Box sx={{ textAlign: 'center' }}>
-              <SearchIcon sx={{ fontSize: 32, mb: 1 }} />
-              <Typography variant="h6">{reorderedQuestions.size}</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>Reordered</Typography>
-            </Box>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <Box sx={{ textAlign: 'center' }}>
-              <WarningIcon sx={{ fontSize: 32, mb: 1 }} />
-              <Typography variant="h6">{activeFiltersCount}</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>Filters Active</Typography>
-            </Box>
-          </Grid>
-        </Grid>
-      </Paper>
 
       {/* Confirmation Dialog */}
       <Dialog
@@ -435,44 +347,22 @@ function SectionOrder() {
         </Typography>
       </Paper>
 
-      {/* Search Input */}
-      <TextField
-        fullWidth
-        placeholder="🔍 Search questions by text..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        variant="outlined"
-        sx={{ mb: 3 }}
-        InputProps={{
-          startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} />,
-          endAdornment: searchTerm && (
-            <Tooltip title="Clear search">
-              <CloseIcon 
-                sx={{ cursor: 'pointer', mr: 1 }} 
-                onClick={() => setSearchTerm('')}
-              />
-            </Tooltip>
-          )
-        }}
-      />
-
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
         <FormControl sx={{ minWidth: 220 }}>
           <InputLabel id="review-type-select-label">Review Type</InputLabel>
           <Select
             labelId="review-type-select-label"
             label="Review Type"
-            multiple
-            value={filters.reviewType ?? []}
+            value={filters.reviewType ?? ''}
             onChange={(event) => {
-              const value = event.target.value as string[]
               const newFilters = {
                 ...filters,
-                reviewType: value && value.length > 0 ? value : undefined
+                reviewType: event.target.value || undefined
               }
               updateFilters(newFilters)
             }}
           >
+            <MenuItem value="">All</MenuItem>
             {reviewTypeOptions.map((option) => (
               <MenuItem key={option.keyValue} value={option.keyValue}>
                 {option.keyDesc}
@@ -486,17 +376,16 @@ function SectionOrder() {
           <Select
             labelId="participant-type-select-label"
             label="Participant Type"
-            multiple
-            value={filters.participantType ?? []}
+            value={filters.participantType ?? ''}
             onChange={(event) => {
-              const value = event.target.value as string[]
               const newFilters = {
                 ...filters,
-                participantType: value && value.length > 0 ? value : undefined
+                participantType: event.target.value || undefined
               }
               updateFilters(newFilters)
             }}
           >
+            <MenuItem value="">All</MenuItem>
             {participantTypeOptions.map((option) => (
               <MenuItem key={option.keyValue} value={option.keyValue}>
                 {option.keyDesc}
@@ -510,17 +399,16 @@ function SectionOrder() {
           <Select
             labelId="country-select-label"
             label="Country"
-            multiple
-            value={filters.country ?? []}
+            value={filters.country ?? ''}
             onChange={(event) => {
-              const value = event.target.value as string[]
               const newFilters = {
                 ...filters,
-                country: value && value.length > 0 ? value : undefined
+                country: event.target.value || undefined
               }
               updateFilters(newFilters)
             }}
           >
+            <MenuItem value="">All</MenuItem>
             {countryOptions.map((option) => (
               <MenuItem key={option.keyValue} value={option.keyValue}>
                 {option.keyDesc}
@@ -548,63 +436,6 @@ function SectionOrder() {
         </Stack>
       </Stack>
 
-      {/* Active Filters Chips */}
-      {activeFiltersCount > 0 && (
-        <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#666' }}>
-            Active Filters:
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {filters.reviewType?.map((value) => (
-              <Chip
-                key={`review-${value}`}
-                label={`📋 ${value}`}
-                onDelete={() => updateFilters({ 
-                  ...filters, 
-                  reviewType: filters.reviewType?.filter(v => v !== value).length ? filters.reviewType?.filter(v => v !== value) : undefined 
-                })}
-                color="primary"
-                variant="outlined"
-              />
-            ))}
-            {filters.participantType?.map((value) => (
-              <Chip
-                key={`participant-${value}`}
-                label={`👤 ${value}`}
-                onDelete={() => updateFilters({ 
-                  ...filters, 
-                  participantType: filters.participantType?.filter(v => v !== value).length ? filters.participantType?.filter(v => v !== value) : undefined 
-                })}
-                color="secondary"
-                variant="outlined"
-              />
-            ))}
-            {filters.country?.map((value) => (
-              <Chip
-                key={`country-${value}`}
-                label={`🌍 ${value}`}
-                onDelete={() => updateFilters({ 
-                  ...filters, 
-                  country: filters.country?.filter(v => v !== value).length ? filters.country?.filter(v => v !== value) : undefined 
-                })}
-                color="success"
-                variant="outlined"
-              />
-            ))}
-            {activeFiltersCount > 0 && (
-              <Button
-                size="small"
-                variant="text"
-                onClick={() => updateFilters({})}
-                sx={{ ml: 1 }}
-              >
-                Clear All
-              </Button>
-            )}
-          </Stack>
-        </Box>
-      )}
-
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {sections.map((section) => {
           // Get full section from allSections
@@ -622,49 +453,30 @@ function SectionOrder() {
                 transition: 'all 0.2s ease'
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Tooltip title={expandedSections.has(section.sectionID) ? "Collapse section" : "Expand section"}>
-                    <Button
-                      size="small"
-                      variant="text"
-                      onClick={() => toggleSectionExpand(section.sectionID)}
-                      sx={{ minWidth: 32, p: 0 }}
-                    >
-                      {expandedSections.has(section.sectionID) ? (
-                        <ExpandLessIcon />
-                      ) : (
-                        <ExpandMoreIcon />
-                      )}
-                    </Button>
-                  </Tooltip>
-                  <Typography variant="h6">{section.sectionName}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    ({orderedQuestions.length} questions)
-                  </Typography>
-                </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">{section.sectionName}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                  ({orderedQuestions.length} questions)
+                </Typography>
               </Box>
 
-              {expandedSections.has(section.sectionID) && (
-                <>
-                  {orderedQuestions.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ pl: 4 }}>
-                      No questions match the selected filters in this section.
-                    </Typography>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                        gap: 1.5,
-                        pl: 4
-                      }}
-                    >
-                      {filterQuestionsBySearch(orderedQuestions).map((question, index) => {
-                        const originalPosition = originalOrderMap[section.sectionID]?.[question.questionID]
-                        const currentPosition = index + 1
-                        const hasOrderChanged = originalPosition && originalPosition !== currentPosition
-                        const metadata = getQuestionMetadata(question)
+              {orderedQuestions.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ pl: 4 }}>
+                  No questions match the selected filters in this section.
+                </Typography>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: 1.5,
+                    pl: 4
+                  }}
+                >
+                  {orderedQuestions.map((question, index) => {
+                    const originalPosition = originalOrderMap[section.sectionID]?.[question.questionID]
+                    const currentPosition = index + 1
+                    const hasOrderChanged = originalPosition && originalPosition !== currentPosition
 
                     return (
                       <Card
@@ -729,23 +541,12 @@ function SectionOrder() {
                                     fontSize: '0.7rem',
                                     color: '#ff9800',
                                     fontWeight: 600,
-                                    mb: 0.5
+                                    mb: 0.3
                                   }}
                                 >
                                   Previous: {originalPosition} → New: {currentPosition}
                                 </Typography>
                               )}
-                              <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                                {metadata.map((meta, idx) => (
-                                  <Chip
-                                    key={idx}
-                                    label={`${meta.icon} ${meta.label}`}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ fontSize: '0.65rem', height: 20 }}
-                                  />
-                                ))}
-                              </Stack>
                             </Box>
                           </Box>
                         </CardContent>
@@ -755,7 +556,7 @@ function SectionOrder() {
                 </Box>
               )}
 
-                  {isFiltered && orderedQuestions.length > 0 && (
+              {isFiltered && orderedQuestions.length > 0 && (
                 <Box sx={{ mt: 2, p: 1.5, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #90caf9' }}>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#1976d2', display: 'block', mb: 0.5 }}>
                     Filtered Order ({orderedQuestions.length} questions):
@@ -795,8 +596,6 @@ function SectionOrder() {
                   </Typography>
                 )}
               </Box>
-                </>
-              )}
             </Paper>
           )
         })}

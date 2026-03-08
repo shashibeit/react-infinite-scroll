@@ -1,0 +1,99 @@
+{
+  "status": "SUCCESS",
+  "sections": [
+    {
+      "sectionOrderId": 1,
+      "sectionID": 1,
+      "sectionName": "Section 1",
+      "questions": [
+        {
+          "questionOrderId": 1,
+          "questionID": "QID0001",
+          "questionText": "What is your risk assessment?",
+          "reviewType": "Due Diligence",
+          "participantType": "XY",
+          "country": "USA",
+          "status": "Active"
+        },
+        {
+          "questionOrderId": 2,
+          "questionID": "QID0002",
+          "questionText": "Describe your compliance process",
+          "reviewType": "Periodic Review",
+          "participantType": "PQR",
+          "country": "UK",
+          "status": "Active"
+        },
+        {
+          "questionOrderId": 3,
+          "questionID": "QID0003",
+          "questionText": "How do you handle data privacy?",
+          "reviewType": "Due Diligence",
+          "participantType": "XY",
+          "country": "India",
+          "status": "Active"
+        }
+      ]
+    },
+    {
+      "sectionOrderId": 2,
+      "sectionID": 2,
+      "sectionName": "Section 2",
+      "questions": [
+        {
+          "questionOrderId": 4,
+          "questionID": "QID0004",
+          "questionText": "What are your security measures?",
+          "reviewType": "Due Diligence",
+          "participantType": "PQR",
+          "country": "Canada",
+          "status": "Active"
+        },
+        {
+          "questionOrderId": 5,
+          "questionID": "QID0005",
+          "questionText": "Explain your audit procedures",
+          "reviewType": "Periodic Review",
+          "participantType": "XY",
+          "country": "USA",
+          "status": "Active"
+        },
+        {
+          "questionOrderId": 6,
+          "questionID": "QID0006",
+          "questionText": "What is your incident response plan?",
+          "reviewType": "Due Diligence",
+          "participantType": "PQR",
+          "country": "UK",
+          "status": "Active"
+        }
+      ]
+    },
+    {
+      "sectionOrderId": 3,
+      "sectionID": 3,
+      "sectionName": "Section 3",
+      "questions": [
+        {
+          "questionOrderId": 7,
+          "questionID": "QID0007",
+          "questionText": "How do you manage vendor risks?",
+          "reviewType": "Periodic Review",
+          "participantType": "XY",
+          "country": "India",
+          "status": "Active"
+        },
+        {
+          "questionOrderId": 8,
+          "questionID": "QID0008",
+          "questionText": "Describe your training program",
+          "reviewType": "Due Diligence",
+          "participantType": "PQR",
+          "country": "Canada",
+          "status": "Active"
+        }
+      ]
+    }
+  ],
+  "filteredSections": []
+}

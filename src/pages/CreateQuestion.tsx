@@ -14,7 +14,12 @@ import {
   Switch,
   FormControlLabel,
   IconButton,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
@@ -31,6 +36,7 @@ function CreateQuestion() {
   const { userRole } = useAppSelector((state) => state.auth)
   const navigate = useNavigate()
   const [sections, setSections] = useState<Section[]>([])
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     text: '',
     sectionId: '',
@@ -47,6 +53,20 @@ function CreateQuestion() {
   useEffect(() => {
     loadSections()
   }, [])
+
+  const checkIfFormIsDirty = (): boolean => {
+    // Check if any field has been modified
+    const hasText = formData.text.trim() !== ''
+    const hasSectionId = formData.sectionId !== ''
+    const hasReviewType = formData.reviewType !== ''
+    const hasParticipantType = formData.participantType !== ''
+    const hasCountry = formData.country !== ''
+    const hasResponseType = formData.responseType !== ''
+    const hasFilledOptions = options.some(opt => opt.trim() !== '')
+    const isNotDefaultActive = !formData.isActive || formData.isDefaultQuestion
+
+    return hasText || hasSectionId || hasReviewType || hasParticipantType || hasCountry || hasResponseType || hasFilledOptions || isNotDefaultActive
+  }
 
   const loadSections = async () => {
     const allSections = await appDb.sections.toArray()
@@ -117,7 +137,20 @@ function CreateQuestion() {
   }
 
   const handleCancel = () => {
+    if (checkIfFormIsDirty()) {
+      setCancelDialogOpen(true)
+    } else {
+      navigate('/question-bank/list')
+    }
+  }
+
+  const handleConfirmCancel = () => {
+    setCancelDialogOpen(false)
     navigate('/question-bank/list')
+  }
+
+  const handleCancelDialogClose = () => {
+    setCancelDialogOpen(false)
   }
 
   const handleAddOption = () => {
@@ -163,7 +196,9 @@ function CreateQuestion() {
               multiline
               rows={4}
               value={formData.text}
-              onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, text: e.target.value })
+              }}
               placeholder="Enter the question text..."
             />
 
@@ -172,7 +207,9 @@ function CreateQuestion() {
               <Select
                 value={formData.sectionId}
                 label="Section"
-                onChange={(e) => setFormData({ ...formData, sectionId: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, sectionId: e.target.value })
+                }}
               >
                 {sections.map((section) => (
                   <MenuItem key={section.id} value={section.id}>
@@ -187,7 +224,9 @@ function CreateQuestion() {
               <Select
                 value={formData.reviewType}
                 label="Review Type"
-                onChange={(e) => setFormData({ ...formData, reviewType: e.target.value as ReviewType })}
+                onChange={(e) => {
+                  setFormData({ ...formData, reviewType: e.target.value as ReviewType })
+                }}
               >
                 <MenuItem value="Due Diligence">Due Diligence</MenuItem>
                 <MenuItem value="Periodic Review">Periodic Review</MenuItem>
@@ -199,7 +238,9 @@ function CreateQuestion() {
               <Select
                 value={formData.participantType}
                 label="Participant Type"
-                onChange={(e) => setFormData({ ...formData, participantType: e.target.value as ParticipantType })}
+                onChange={(e) => {
+                  setFormData({ ...formData, participantType: e.target.value as ParticipantType })
+                }}
               >
                 <MenuItem value="XY">XY</MenuItem>
                 <MenuItem value="PQR">PQR</MenuItem>
@@ -211,7 +252,9 @@ function CreateQuestion() {
               <Select
                 value={formData.country}
                 label="Country"
-                onChange={(e) => setFormData({ ...formData, country: e.target.value as CountryType })}
+                onChange={(e) => {
+                  setFormData({ ...formData, country: e.target.value as CountryType })
+                }}
               >
                 <MenuItem value="">
                   <em>None</em>
@@ -291,7 +334,9 @@ function CreateQuestion() {
                 control={
                   <Switch
                     checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, isActive: e.target.checked })
+                    }}
                   />
                 }
                 label="Active"
@@ -300,7 +345,9 @@ function CreateQuestion() {
                 control={
                   <Switch
                     checked={formData.isDefaultQuestion}
-                    onChange={(e) => setFormData({ ...formData, isDefaultQuestion: e.target.checked })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, isDefaultQuestion: e.target.checked })
+                    }}
                   />
                 }
                 label="Default Question"
@@ -325,6 +372,35 @@ function CreateQuestion() {
           </Stack>
         </form>
       </Paper>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog
+        open={cancelDialogOpen}
+        onClose={handleCancelDialogClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 600, color: '#22223e' }}>
+          Discard Changes?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mt: 2 }}>
+            You have unsaved changes. Are you sure you want to cancel and discard all changes?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCancelDialogClose} variant="outlined">
+            Keep Editing
+          </Button>
+          <Button
+            onClick={handleConfirmCancel}
+            variant="contained"
+            color="error"
+          >
+            Discard Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

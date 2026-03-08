@@ -2,12 +2,14 @@ import { configureStore } from '@reduxjs/toolkit'
 import questionsReducer from './questionsSlice'
 import authReducer from './authSlice'
 import questionOrderReducer from './questionOrderSlice'
+import sectionOrderV2Reducer from './sectionOrderV2Slice'
 
 export const store = configureStore({
   reducer: {
     questions: questionsReducer,
     auth: authReducer,
-    questionOrder: questionOrderReducer
+    questionOrder: questionOrderReducer,
+    sectionOrderV2: sectionOrderV2Reducer,
   }
 })
 
