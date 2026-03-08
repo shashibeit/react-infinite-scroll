@@ -555,3 +555,47 @@ export const updateSectionOrder = (
     }
   }
 }
+
+// Filter Options Types
+export interface FilterOption {
+  keyVal: string
+  keyDesc: string
+}
+
+export interface FilterOptionsResponse {
+  status: 'SUCCESS' | 'ERROR'
+  statusCode: string
+  reviewTypes: FilterOption[]
+  participantTypes: FilterOption[]
+  countries: FilterOption[]
+}
+
+// Mock Filter Options
+export const mockFilterOptions: FilterOptionsResponse = {
+  status: 'SUCCESS',
+  statusCode: '200',
+  reviewTypes: [
+    { keyVal: 'DD', keyDesc: 'Due Diligence' },
+    { keyVal: 'PR', keyDesc: 'Periodic Review' },
+    { keyVal: 'AR', keyDesc: 'Annual Review' },
+  ],
+  participantTypes: [
+    { keyVal: 'ISS', keyDesc: 'Issuer' },
+    { keyVal: 'ACQ', keyDesc: 'Acquires' },
+    { keyVal: 'ACQDNC', keyDesc: 'Acquires DNC' },
+    { keyVal: 'OBS', keyDesc: 'Observer' },
+  ],
+  countries: [
+    { keyVal: 'USA', keyDesc: 'USA' },
+    { keyVal: 'CAN', keyDesc: 'Canada' },
+    { keyVal: 'UK', keyDesc: 'UK' },
+    { keyVal: 'IND', keyDesc: 'India' },
+    { keyVal: 'AUS', keyDesc: 'Australia' },
+  ],
+}
+
+// Function to get filter options
+export const getFilterOptions = (): FilterOptionsResponse => {
+  console.log('📋 Fetching filter options')
+  return mockFilterOptions
+}

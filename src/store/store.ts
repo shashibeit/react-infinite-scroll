@@ -3,6 +3,7 @@ import questionsReducer from './questionsSlice'
 import authReducer from './authSlice'
 import questionOrderReducer from './questionOrderSlice'
 import sectionOrderV2Reducer from './sectionOrderV2Slice'
+import filterOptionsReducer from './filterOptionsSlice'
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     auth: authReducer,
     questionOrder: questionOrderReducer,
     sectionOrderV2: sectionOrderV2Reducer,
+    filterOptions: filterOptionsReducer,
   }
 })
 

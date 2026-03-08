@@ -17,7 +17,6 @@ import {
   Select,
   Typography,
   CircularProgress,
-  Backdrop,
   Alert,
 } from '@mui/material'
 
@@ -31,7 +30,9 @@ import {
   FilterRequest,
   Question,
   UpdateSectionOrderRequest,
+  FilteredSection,
 } from '../store/sectionOrderV2Slice'
+import { fetchFilterOptions } from '../store/filterOptionsSlice'
 
 interface FilterOption {
   keyVal: string
@@ -48,9 +49,16 @@ const SectionOrderV2: React.FC = () => {
     error: reduxError,
   } = useAppSelector((state) => state.sectionOrderV2)
 
+  const {
+    reviewTypes: reviewTypeOptions,
+    participantTypes: participantTypeOptions,
+    countries: countryOptions,
+  } = useAppSelector((state) => state.filterOptions)
+
   const [reviewTypes, setReviewTypes] = useState<string[]>([])
   const [participantTypes, setParticipantTypes] = useState<string[]>([])
   const [countries, setCountries] = useState<string[]>([])
+  const [initialFullOrderSections, setInitialFullOrderSections] = useState<FilteredSection[]>([])
   const [draggedQuestion, setDraggedQuestion] = useState<{
     sectionId: number
     questionId: string
@@ -64,24 +72,6 @@ const SectionOrderV2: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState(reduxError || '')
 
-  const reviewTypeOptions: FilterOption[] = [
-    { keyVal: 'DD', keyDesc: 'Due Diligence' },
-    { keyVal: 'PR', keyDesc: 'Periodic Review' },
-  ]
-
-  const participantTypeOptions: FilterOption[] = [
-    { keyVal: 'ISS', keyDesc: 'Issuer' },
-    { keyVal: 'ACQ', keyDesc: 'Acquires' },
-    { keyVal: 'ACQDNC', keyDesc: 'Acquires DNC' },
-  ]
-
-  const countryOptions: FilterOption[] = [
-    { keyVal: 'USA', keyDesc: 'USA' },
-    { keyVal: 'CAN', keyDesc: 'Canada' },
-    { keyVal: 'UK', keyDesc: 'UK' },
-    { keyVal: 'IND', keyDesc: 'India' },
-  ]
-
   // Map keyVal to keyDesc for API call
   const mapKeyValToDesc = (keyVals: string[], options: FilterOption[]): string[] => {
     return keyVals.map((val) => options.find((opt) => opt.keyVal === val)?.keyDesc || val).filter(Boolean)
@@ -92,6 +82,35 @@ const SectionOrderV2: React.FC = () => {
       .map((val) => options.find((opt) => opt.keyVal === val)?.keyDesc)
       .filter(Boolean)
       .join(', ')
+  }
+
+  // Helper function to check if order has changed
+  const hasOrderChanged = (): boolean => {
+    if (initialFullOrderSections.length === 0 || fullOrderSections.length === 0) {
+      return false
+    }
+
+    // Compare each section's questions order
+    for (let i = 0; i < fullOrderSections.length; i++) {
+      const currentSection = fullOrderSections[i]
+      const initialSection = initialFullOrderSections[i]
+
+      if (!currentSection.questions || !initialSection.questions) return false
+
+      // Check if question order is different
+      const currentOrder = currentSection.questions.map((q) => q.questionId)
+      const initialOrder = initialSection.questions.map((q) => q.questionId)
+
+      if (currentOrder.length !== initialOrder.length) return true
+
+      for (let j = 0; j < currentOrder.length; j++) {
+        if (currentOrder[j] !== initialOrder[j]) {
+          return true
+        }
+      }
+    }
+
+    return false
   }
 
   // Fetch filtered data based on filters
@@ -106,15 +125,33 @@ const SectionOrderV2: React.FC = () => {
     // Dispatch Redux thunk to fetch data
     const result = await dispatch(fetchSectionOrderData(filterRequest))
     
-    if (result.payload && typeof result.payload === 'object' && 'sections' in result.payload) {
+    // Check if the request was successful using meta.requestStatus
+    if (result.meta.requestStatus === 'fulfilled' && result.payload) {
+      // Success case
       const response = result.payload as any
       dispatch(setFullOrderSections(response.sections))
       
-      // Use filteredSections if filters are applied, otherwise use sections
-      const sectionsToDisplay =
-        response.filteredSections.length > 0 ? response.filteredSections : response.sections
+      // Store initial order for comparison
+      setInitialFullOrderSections(JSON.parse(JSON.stringify(response.sections)))
+      
+      // Check if any filters are applied
+      const filtersApplied = reviewTypesVal.length > 0 || participantTypesVal.length > 0 || countriesVal.length > 0
+      
+      // Determine what to display
+      let sectionsToDisplay
+      if (filtersApplied) {
+        // If filters are applied, only show filtered results (even if empty)
+        sectionsToDisplay = response.filteredSections
+      } else {
+        // If no filters, show all sections
+        sectionsToDisplay = response.sections
+      }
       
       dispatch(setSections(sectionsToDisplay))
+    } else if (result.meta.requestStatus === 'rejected') {
+      // Error case - set sections to empty and let Redux error handler show the error
+      console.error('Error fetching data:', result.payload)
+      dispatch(setSections([]))
     }
   }
 
@@ -146,6 +183,11 @@ const SectionOrderV2: React.FC = () => {
       fetchFilteredData([], [], [])
     }
   }, [])
+
+  // Fetch filter options on mount
+  useEffect(() => {
+    dispatch(fetchFilterOptions())
+  }, [dispatch])
 
   // Sync Redux error to component state
   useEffect(() => {
@@ -533,7 +575,7 @@ const SectionOrderV2: React.FC = () => {
               variant="contained"
               color="primary"
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || sections.length === 0 || !hasOrderChanged()}
             >
               {submitting ? 'Submitting...' : 'Submit'}
             </Button>
@@ -541,16 +583,24 @@ const SectionOrderV2: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Loading Backdrop with Circular Progress */}
-      <Backdrop
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={submitting || reduxSubmitLoading}
+      {/* Loading Modal */}
+      <Dialog 
+        open={submitting || reduxSubmitLoading} 
+        onClose={() => {}} 
+        maxWidth="sm" 
+        fullWidth
+        disableEscapeKeyDown
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <CircularProgress color="inherit" size={60} />
-          <Typography variant="body1">Submitting section order...</Typography>
-        </Box>
-      </Backdrop>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 4 }}>
+          <CircularProgress size={50} />
+          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+            Submitting section order...
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Please wait while we process your changes
+          </Typography>
+        </DialogContent>
+      </Dialog>
 
       {/* Error Alert */}
       {errorMessage && (
@@ -576,15 +626,15 @@ const SectionOrderV2: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Loading State */}
-      {(reduxLoading || submitting) && (
+      {/* Loading State - Only for fetching, not for submission (submission uses Modal Dialog) */}
+      {reduxLoading && !submitting && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress />
         </Box>
       )}
 
       {/* Sections Display */}
-      {!(reduxLoading || submitting) && sections.length > 0 && (
+      {!reduxLoading && !submitting && sections.length > 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {sections.map((section) => (
             <Paper
@@ -690,11 +740,11 @@ const SectionOrderV2: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!(reduxLoading || submitting) && sections.length === 0 && (
+      {!reduxLoading && !submitting && sections.length === 0 && (
         <Card>
           <CardContent>
             <Typography color="textSecondary" align="center">
-              Select filters to view sections and questions
+              No Data available
             </Typography>
           </CardContent>
         </Card>
