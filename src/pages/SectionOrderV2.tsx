@@ -113,6 +113,39 @@ const SectionOrderV2: React.FC = () => {
     return false
   }
 
+  // Helper function to fix sequence numbers in filtered questions
+  // API returns sequential numbers (1, 2, 3) but we need original (3, 5, 7)
+  const fixFilteredSequenceNumbers = (
+    filteredSections: FilteredSection[],
+    fullSections: FilteredSection[]
+  ): FilteredSection[] => {
+    return filteredSections.map((section) => {
+      // Find the corresponding full section
+      const fullSection = fullSections.find((s) => s.sectionId === section.sectionId)
+
+      if (!section.questions || !fullSection || !fullSection.questions) {
+        return section
+      }
+
+      // Create a map of questionId -> original questionSeqNo
+      const seqNumberMap = new Map<string, number>()
+      fullSection.questions.forEach((q) => {
+        seqNumberMap.set(q.questionId, q.questionSeqNo)
+      })
+
+      // Fix sequence numbers in filtered questions
+      const correctedQuestions = section.questions.map((q) => {
+        const originalSeqNo = seqNumberMap.get(q.questionId)
+        if (originalSeqNo !== undefined) {
+          return { ...q, questionSeqNo: originalSeqNo }
+        }
+        return q
+      })
+
+      return { ...section, questions: correctedQuestions }
+    })
+  }
+
   // Fetch filtered data based on filters
   const fetchFilteredData = async (reviewTypesVal: string[], participantTypesVal: string[], countriesVal: string[]) => {
     // Build API request payload with mapped descriptions
@@ -141,7 +174,11 @@ const SectionOrderV2: React.FC = () => {
       let sectionsToDisplay
       if (filtersApplied) {
         // If filters are applied, only show filtered results (even if empty)
-        sectionsToDisplay = response.filteredSections
+        // Fix sequence numbers if API returns them sequentially
+        sectionsToDisplay = fixFilteredSequenceNumbers(
+          response.filteredSections,
+          response.sections
+        )
       } else {
         // If no filters, show all sections
         sectionsToDisplay = response.sections
