@@ -114,7 +114,17 @@ const SectionOrderV2: React.FC = () => {
     return false
   }
 
-  // Helper function to check if a specific question has moved from its original position
+  // Helper function to get the original sequence number for a question
+  const getOriginalSequenceNumber = (questionId: string, sectionId: number): number | null => {
+    const hasFiltersApplied = reviewTypes.length > 0 || participantTypes.length > 0 || countries.length > 0
+    const initialStateToCompare = hasFiltersApplied ? initialFilteredSections : initialFullOrderSections
+
+    const initialSection = initialStateToCompare.find((s) => s.sectionId === sectionId)
+    if (!initialSection?.questions) return null
+
+    const question = initialSection.questions.find((q) => q.questionId === questionId)
+    return question?.questionSeqNo ?? null
+  }
   const hasQuestionMoved = (questionId: string, sectionId: number): boolean => {
     // Determine which initial state to use
     const hasFiltersApplied = reviewTypes.length > 0 || participantTypes.length > 0 || countries.length > 0
@@ -186,19 +196,19 @@ const SectionOrderV2: React.FC = () => {
 
     // Dispatch Redux thunk to fetch data
     const result = await dispatch(fetchSectionOrderData(filterRequest))
-    
+
     // Check if the request was successful using meta.requestStatus
     if (result.meta.requestStatus === 'fulfilled' && result.payload) {
       // Success case
       const response = result.payload as any
       dispatch(setFullOrderSections(response.sections))
-      
+
       // Store initial order for comparison
       setInitialFullOrderSections(JSON.parse(JSON.stringify(response.sections)))
-      
+
       // Check if any filters are applied
       const filtersApplied = reviewTypesVal.length > 0 || participantTypesVal.length > 0 || countriesVal.length > 0
-      
+
       // Determine what to display
       let sectionsToDisplay
       if (filtersApplied) {
@@ -216,7 +226,7 @@ const SectionOrderV2: React.FC = () => {
         // Clear filtered initial state when no filters
         setInitialFilteredSections([])
       }
-      
+
       dispatch(setSections(sectionsToDisplay))
     } else if (result.meta.requestStatus === 'rejected') {
       // Error case - set sections to empty and let Redux error handler show the error
@@ -418,7 +428,7 @@ const SectionOrderV2: React.FC = () => {
     if (isFiltered) {
       // FILTERED VIEW: Swap the two questions directly
       console.log('Using SWAP behavior for filtered view')
-      
+
       // Swap in displayed order
       const newDisplayedOrder = [...displayedOrder]
       const temp = newDisplayedOrder[draggedIndex]
@@ -500,7 +510,7 @@ const SectionOrderV2: React.FC = () => {
     } else {
       // UNFILTERED VIEW: Shift behavior
       console.log('Using SHIFT behavior for unfiltered view')
-      
+
       const newDisplayedOrder = [...displayedOrder]
       newDisplayedOrder.splice(draggedIndex, 1)
       newDisplayedOrder.splice(targetIndex, 0, sourceQuestionId)
@@ -654,10 +664,10 @@ const SectionOrderV2: React.FC = () => {
       </Card>
 
       {/* Loading Modal */}
-      <Dialog 
-        open={submitting || reduxSubmitLoading} 
-        onClose={() => {}} 
-        maxWidth="sm" 
+      <Dialog
+        open={submitting || reduxSubmitLoading}
+        onClose={() => { }}
+        maxWidth="sm"
         fullWidth
         disableEscapeKeyDown
       >
@@ -758,7 +768,7 @@ const SectionOrderV2: React.FC = () => {
                             : '#f5f5f5',
                         border:
                           dragOverQuestion?.sectionId === section.sectionId &&
-                          dragOverQuestion?.questionId === question.questionId
+                            dragOverQuestion?.questionId === question.questionId
                             ? '2px dashed #ff9800'
                             : '1px solid #ddd',
                         transition: 'all 0.2s ease',
@@ -793,6 +803,19 @@ const SectionOrderV2: React.FC = () => {
                             <Typography variant="body2" sx={{ fontSize: '0.875rem', lineHeight: 1.4, mb: 0.5 }}>
                               {question.questionText}
                             </Typography>
+                            {hasQuestionMoved(question.questionId, section.sectionId) && (
+                              <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                                <Typography variant="caption" sx={{ color: '#ff9800', fontWeight: 600 }}>
+                                  Previous: {getOriginalSequenceNumber(question.questionId, section.sectionId)}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#ff9800', fontWeight: 600 }}>
+                                  {"→"}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#ff9800', fontWeight: 600 }}>
+                                  New: {question.questionSeqNo}
+                                </Typography>
+                              </Box>
+                            )}
                           </Box>
                         </Box>
                       </CardContent>
