@@ -59,6 +59,7 @@ const SectionOrderV2: React.FC = () => {
   const [participantTypes, setParticipantTypes] = useState<string[]>([])
   const [countries, setCountries] = useState<string[]>([])
   const [initialFullOrderSections, setInitialFullOrderSections] = useState<FilteredSection[]>([])
+  const [initialFilteredSections, setInitialFilteredSections] = useState<FilteredSection[]>([])
   const [draggedQuestion, setDraggedQuestion] = useState<{
     sectionId: number
     questionId: string
@@ -111,6 +112,34 @@ const SectionOrderV2: React.FC = () => {
     }
 
     return false
+  }
+
+  // Helper function to check if a specific question has moved from its original position
+  const hasQuestionMoved = (questionId: string, sectionId: number): boolean => {
+    // Determine which initial state to use
+    const hasFiltersApplied = reviewTypes.length > 0 || participantTypes.length > 0 || countries.length > 0
+    const initialStateToCompare = hasFiltersApplied ? initialFilteredSections : initialFullOrderSections
+
+    if (initialStateToCompare.length === 0 || sections.length === 0) {
+      return false
+    }
+
+    // Find original position
+    const initialSection = initialStateToCompare.find((s) => s.sectionId === sectionId)
+    if (!initialSection?.questions) return false
+
+    const initialIndex = initialSection.questions.findIndex((q) => q.questionId === questionId)
+    if (initialIndex === -1) return false
+
+    // Find current position
+    const currentSection = sections.find((s) => s.sectionId === sectionId)
+    if (!currentSection?.questions) return false
+
+    const currentIndex = currentSection.questions.findIndex((q) => q.questionId === questionId)
+    if (currentIndex === -1) return false
+
+    // Question has moved if indices are different
+    return initialIndex !== currentIndex
   }
 
   // Helper function to fix sequence numbers in filtered questions
@@ -179,9 +208,13 @@ const SectionOrderV2: React.FC = () => {
           response.filteredSections,
           response.sections
         )
+        // Store initial filtered sections for comparison when checking if items moved
+        setInitialFilteredSections(JSON.parse(JSON.stringify(sectionsToDisplay)))
       } else {
         // If no filters, show all sections
         sectionsToDisplay = response.sections
+        // Clear filtered initial state when no filters
+        setInitialFilteredSections([])
       }
       
       dispatch(setSections(sectionsToDisplay))
@@ -744,7 +777,7 @@ const SectionOrderV2: React.FC = () => {
                               minWidth: 24,
                               height: 24,
                               borderRadius: '50%',
-                              backgroundColor: '#23233F',
+                              backgroundColor: hasQuestionMoved(question.questionId, section.sectionId) ? '#ff9800' : '#23233F',
                               color: '#fff',
                               display: 'flex',
                               alignItems: 'center',
