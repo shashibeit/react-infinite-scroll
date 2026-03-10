@@ -114,8 +114,8 @@ const SectionOrderV2: React.FC = () => {
     return false
   }
 
-  // Helper function to get the original sequence number for a question
-  const getOriginalSequenceNumber = (questionId: string, sectionId: number): number | null => {
+  // Helper function to get the original order number for a question
+  const getOriginalOrderNumber = (questionId: string, sectionId: number): number | null => {
     const hasFiltersApplied = reviewTypes.length > 0 || participantTypes.length > 0 || countries.length > 0
     const initialStateToCompare = hasFiltersApplied ? initialFilteredSections : initialFullOrderSections
 
@@ -123,7 +123,35 @@ const SectionOrderV2: React.FC = () => {
     if (!initialSection?.questions) return null
 
     const question = initialSection.questions.find((q) => q.questionId === questionId)
-    return question?.questionSeqNo ?? null
+    if (!question) return null
+
+    // For filtered view: use sequence number (actual order number like 2, 4, 7)
+    // For unfiltered view: use position index (1, 2, 3, 4, 5)
+    if (hasFiltersApplied) {
+      return question.questionSeqNo
+    } else {
+      const index = initialSection.questions.findIndex((q) => q.questionId === questionId)
+      return index !== -1 ? index + 1 : null
+    }
+  }
+
+  // Helper function to get the current order number for a question
+  const getCurrentOrderNumber = (questionId: string, sectionId: number): number | null => {
+    const hasFiltersApplied = reviewTypes.length > 0 || participantTypes.length > 0 || countries.length > 0
+    const section = sections.find((s) => s.sectionId === sectionId)
+    if (!section?.questions) return null
+
+    const question = section.questions.find((q) => q.questionId === questionId)
+    if (!question) return null
+
+    // For filtered view: use sequence number (actual order number like 2, 4, 7)
+    // For unfiltered view: use position index (1, 2, 3, 4, 5)
+    if (hasFiltersApplied) {
+      return question.questionSeqNo
+    } else {
+      const index = section.questions.findIndex((q) => q.questionId === questionId)
+      return index !== -1 ? index + 1 : null
+    }
   }
   const hasQuestionMoved = (questionId: string, sectionId: number): boolean => {
     // Determine which initial state to use
@@ -511,9 +539,20 @@ const SectionOrderV2: React.FC = () => {
       // UNFILTERED VIEW: Shift behavior
       console.log('Using SHIFT behavior for unfiltered view')
 
+      const targetQuestion = displayedOrder[targetIndex]
       const newDisplayedOrder = [...displayedOrder]
       newDisplayedOrder.splice(draggedIndex, 1)
-      newDisplayedOrder.splice(targetIndex, 0, sourceQuestionId)
+      
+      // Find where target question ended up after removal
+      const newTargetIndex = newDisplayedOrder.indexOf(targetQuestion)
+      
+      if (draggedIndex < targetIndex) {
+        // Moving forward: insert after the target
+        newDisplayedOrder.splice(newTargetIndex + 1, 0, sourceQuestionId)
+      } else {
+        // Moving backward: insert before the target
+        newDisplayedOrder.splice(newTargetIndex, 0, sourceQuestionId)
+      }
 
       const fullOrder = fullSection.questions.map((q) => q.questionId)
 
@@ -806,13 +845,13 @@ const SectionOrderV2: React.FC = () => {
                             {hasQuestionMoved(question.questionId, section.sectionId) && (
                               <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
                                 <Typography variant="caption" sx={{ color: '#ff9800', fontWeight: 600 }}>
-                                  Previous: {getOriginalSequenceNumber(question.questionId, section.sectionId)}
+                                  Previous: {getOriginalOrderNumber(question.questionId, section.sectionId)}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: '#ff9800', fontWeight: 600 }}>
                                   {"→"}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: '#ff9800', fontWeight: 600 }}>
-                                  New: {question.questionSeqNo}
+                                  New: {getCurrentOrderNumber(question.questionId, section.sectionId)}
                                 </Typography>
                               </Box>
                             )}
